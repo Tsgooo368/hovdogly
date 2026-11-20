@@ -1,0 +1,1 @@
+{"name":"hovdogly","version":"1.0.0","private":true,"description":"Ховдоглы: ховор хариултын тоглоом","main":"server.js","scripts":{"start":"node server.js"},"engines":{"node":">=20"}}
