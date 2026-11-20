@@ -2,9 +2,15 @@
 const http=require("http"),fs=require("fs"),path=require("path"),crypto=require("crypto");
 const PORT=+process.env.PORT||8080;
 const DATA_DIR=process.env.DATA_DIR||path.join(__dirname,"data");
-const AI_BASE=(process.env.AI_BASE_URL||"https://openrouter.ai/api/v1").replace(/\/$/,"");
-const AI_KEY=process.env.AI_API_KEY||"";
-const AI_MODEL=process.env.AI_MODEL||"google/gemma-3-27b-it:free";
+// AI providers, tried in order; when one is out of quota the next one answers.
+const PROVIDERS=[
+  {name:"google",key:process.env.GEMINI_API_KEY,base:"https://generativelanguage.googleapis.com/v1beta/openai",model:process.env.GEMINI_MODEL||"gemma-3-27b-it"},
+  {name:"openrouter",key:process.env.AI_API_KEY,base:(process.env.AI_BASE_URL||"https://openrouter.ai/api/v1").replace(/\/$/,""),model:process.env.AI_MODEL||"google/gemma-3-27b-it:free"},
+  {name:"groq",key:process.env.GROQ_API_KEY,base:"https://api.groq.com/openai/v1",model:process.env.GROQ_MODEL||"qwen/qwen3-32b"},
+].filter(p=>p.key&&p.key.trim());
+const AI_KEY=PROVIDERS.length?"on":"";
+const AI_MODEL=PROVIDERS.map(p=>p.name+":"+p.model).join(", ");
+const cool=new Map(); // provider -> time until which it is skipped after a quota error
 fs.mkdirSync(DATA_DIR,{recursive:true});
 const STATE=path.join(DATA_DIR,"state.json");
 let st={players:{},judge:{}};
@@ -49,15 +55,21 @@ The text may be Mongolian Cyrillic, Mongolian in Latin letters, English or anoth
 Decide whether it is a genuinely valid answer to the prompt. Funny, playful or cheeky answers count when they truly fit (for example a sex toy for "things you take on a trip"). Reject gibberish, off-topic text, and anything that does not fit.
 Rate how rare it is among answers people would give: 1 = very common, 2 = fairly common, 3 = uncommon, 4 = rare, 5 = very rare but clearly valid.
 Reply with JSON only, no other text: {"valid": true or false, "name": "the answer's standard name in Mongolian Cyrillic", "tier": 1-5}`;
-  const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),12000);
-  try{const r=await fetch(AI_BASE+"/chat/completions",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+AI_KEY},
-      body:JSON.stringify({model:AI_MODEL,temperature:0,max_tokens:120,messages:[{role:"user",content:prompt}]})});
-    if(!r.ok){console.error("ai http",r.status,(await r.text()).slice(0,300));return null}
-    const j=await r.json();const txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"";
-    const m=txt.match(/\{[\s\S]*\}/);if(!m)return null;const o=JSON.parse(m[0]);
-    const res={valid:o.valid===true,name:clean(o.name||input,40),tier:Math.max(1,Math.min(5,Math.round(+o.tier||4)))};
-    st.judge[key]=res;dirty=true;return res;
-  }catch(e){console.error("ai err",e.message);return null}finally{clearTimeout(to)}}
+  for(const pv of PROVIDERS){
+    if((cool.get(pv.name)||0)>Date.now())continue;
+    const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),12000);
+    try{const r=await fetch(pv.base+"/chat/completions",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+pv.key.trim()},
+        body:JSON.stringify({model:pv.model,temperature:0,max_tokens:400,messages:[{role:"user",content:prompt}]})});
+      if(!r.ok){console.error("ai",pv.name,r.status,(await r.text()).slice(0,200));if(r.status===429||r.status===402||r.status>=500)cool.set(pv.name,Date.now()+(r.status===429?60000:300000));continue}
+      const j=await r.json();let txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"";
+      txt=txt.replace(/<think>[\s\S]*?<\/think>/g,"");
+      const m=txt.match(/\{[\s\S]*?\}/);if(!m){console.error("ai",pv.name,"no json",txt.slice(0,120));continue}
+      const o=JSON.parse(m[0]);
+      const res={valid:o.valid===true,name:clean(o.name||input,40),tier:Math.max(1,Math.min(5,Math.round(+o.tier||4))),by:pv.name};
+      st.judge[key]=res;dirty=true;return res;
+    }catch(e){console.error("ai",pv.name,e.message)}finally{clearTimeout(to)}
+  }
+  return null}
 
 http.createServer(async(req,res)=>{
   const u=new URL(req.url,"http://x");const p=u.pathname;

@@ -10,6 +10,8 @@ npm start
 ## Тохиргоо (орчны хувьсагч)
 | Нэр | Утга |
 |---|---|
+| `GEMINI_API_KEY` | Google AI Studio-ийн түлхүүр (Gemma 3 27B, үнэгүй, өдрийн хязгаар өндөр). Эхэлж оролдоно. |
+| `GROQ_API_KEY` | Groq-ийн түлхүүр (Qwen3 32B, үнэгүй). Нөөц. |
 | `AI_API_KEY` | OpenRouter (эсвэл OpenAI-тэй нийцтэй үйлчилгээ)-ийн түлхүүр. Байхгүй бол AI шалгалт унтарна. |
 | `AI_MODEL` | Анхдагч: `google/gemma-3-27b-it:free` (үнэгүй, өдрийн хязгаартай). Жишээ нь `qwen/qwen3-32b`. |
 | `AI_BASE_URL` | Анхдагч: `https://openrouter.ai/api/v1`. Groq: `https://api.groq.com/openai/v1`. |

@@ -326,7 +326,28 @@ for(const c of CATS){
   c.total=c.ans.length;
 }
 const CATMAP=Object.fromEntries(CATS.map(c=>[c.id,c]));
+// Latin letters that look like Cyrillic ones (for words typed with both scripts mixed)
+const GLYPH={a:"а",b:"в",c:"с",e:"е",h:"н",k:"к",m:"м",o:"о",p:"р",t:"т",x:"х",y:"у"};
+const SUFF=["chud","nud","ud","in","ni","gi","ig","ad","ed","od","s","es","a","e","o"];
+function variants(input){
+  const out=[];const add=v=>{v=String(v).trim();if(v&&!out.includes(v))out.push(v)};
+  add(input);
+  const fixed=input.split(/\s+/).map(w=>/[а-яөүё]/i.test(w)&&/[a-z]/i.test(w)?w.replace(/[a-z]/gi,ch=>GLYPH[ch.toLowerCase()]||ch):w).join(" ");
+  add(fixed);
+  const words=fixed.split(/\s+/).filter(w=>w.length>1);
+  if(words.length>1){add(words.join(""));words.slice().sort((a,b)=>b.length-a.length).forEach(add)}
+  return out;
+}
 function match(cat,input){
+  for(const v of variants(input)){const a=match1(cat,v);if(a)return a}
+  // Mongolian/English plural and case endings: try the stem
+  for(const v of variants(input)){const l=loose(v);for(const suf of SUFF){if(l.length>suf.length+2&&l.endsWith(suf)){const st=l.slice(0,-suf.length);
+    for(const a of cat.ans)if(a.keys.some(k=>k.l===st))return a;
+    let cand=null,cd=99;for(const a of cat.ans)for(const k of a.keys)if(vow(k.l)===vow(st)){const d=lev(st,k.l);if(d<cd){cd=d;cand=a}}
+    if(cand)return cand}}}
+  return null;
+}
+function match1(cat,input){
   const c=cyrNorm(input), l=loose(input), lw=vow(l);
   if(!l)return null;
   for(const a of cat.ans) if(a.keys.some(k=>k.c===c))return a;
