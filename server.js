@@ -32,7 +32,7 @@ let st={players:{},judge:{},extra:{}};
 try{st=Object.assign(st,JSON.parse(fs.readFileSync(STATE,"utf8")))}catch(e){}
 st.extra=st.extra||{};
 let dirty=false;
-const JUDGE_VER=2;if(st.jver!==JUDGE_VER){st.judge={};st.extra={};st.jver=JUDGE_VER;dirty=true}
+const JUDGE_VER=3;if(st.jver!==JUDGE_VER){st.judge={};st.extra={};st.jver=JUDGE_VER;dirty=true}
 function flush(){if(dirty){dirty=false;try{fs.writeFileSync(STATE,JSON.stringify(st))}catch(e){}}}
 for(const sig of ["SIGTERM","SIGINT"])process.on(sig,()=>{flush();process.exit(0)});
 setInterval(()=>{if(!dirty)return;dirty=false;const tmp=STATE+".tmp";fs.writeFile(tmp,JSON.stringify(st),e=>{if(!e)fs.rename(tmp,STATE,()=>{})})},5000);
@@ -96,12 +96,16 @@ You are a STRICT fact-checking judge. Check silently, step by step:
 1. What exactly does the player's text refer to? Identify the specific real thing, person, character, place or brand. If you cannot identify it with confidence, it is NOT valid.
 2. Does that thing truly belong to the prompt's category? For "name a ..." prompts (superheroes, countries, footballers, animals, brands...) it must be a real, well-documented member of that category. A random first name, a person who is not in the category, a near-miss category, or a guess is NOT valid (e.g. "Vincent" is not a superhero; "Brazil" is not a European country).
 3. For prompts about what can be somewhere or used somehow ("things in a pocket", "things you take on a trip"), accept real things that realistically fit, including funny or cheeky ones (a hamster in a pocket, a sex toy on a trip). Reject things that obviously cannot fit.
-4. Typos and Latin-letter Mongolian are fine if the intended answer is clear. Gibberish, made-up words and non-answers are NOT valid.
+4. Mongolian words to know: «зусаг» and «үхэр зусаг» (uher zusag) mean hamster; «шишүүхэй» is a hamster-like rodent; «тарвага» is a marmot; «жижиг» means small.
+5. Typos and Latin-letter Mongolian are fine if the intended answer is clear. Gibberish, made-up words and non-answers are NOT valid.
 When in doubt, answer valid=false.
 Also rate how many players would think of it: 1 = very common, 2 = common, 3 = uncommon, 4 = rare. Most valid answers are 2 or 3; use 4 only for genuinely obscure but correct answers.
 Reply with JSON only, no other text: {"what": "what it is, at most 6 words", "valid": true or false, "name": "its standard name in Mongolian Cyrillic", "tier": 1-4}`;
   const tries=[];for(const p of PROVIDERS)for(const m of (p.models||[p.model]))tries.push(Object.assign({},p,{model:m,name:p.name+":"+m}));
-  if(!/lite/.test(lastGood))tries.sort((a,b)=>(b.name===lastGood)-(a.name===lastGood));
+  // order: one healthy strong model (short wait), then the model that answered last, then fast lite models, then the rest
+  const ok=t=>(cool.get(t.name)||0)<=Date.now(),isLite=t=>/lite/.test(t.model);
+  const strong=tries.find(t=>!isLite(t)&&ok(t)),last=tries.find(t=>t.name===lastGood);
+  const order=[...new Set([strong,last,...tries.filter(isLite),...tries].filter(Boolean))];tries.length=0;tries.push(...order);
   // every model is cooling down: try the least recently failed one anyway
   if(tries.every(t=>(cool.get(t.name)||0)>Date.now())&&tries.length){const t=tries.slice().sort((a,b)=>(cool.get(a.name)||0)-(cool.get(b.name)||0))[0];cool.delete(t.name)}
   const t0=Date.now();
@@ -109,13 +113,13 @@ Reply with JSON only, no other text: {"what": "what it is, at most 6 words", "va
     if((cool.get(pv.name)||0)>Date.now())continue;
     if(Date.now()-t0>11000)break; // the player is waiting: give up rather than hang
     const gem=/gemini/.test(pv.model);
-    const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),Math.max(2500,Math.min(/31b|27b/.test(pv.model)||pv.slow?9000:7000,13000-(Date.now()-t0))));
+    const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),Math.max(2500,Math.min(pv===tries[0]&&!isLite(pv)?5000:8000,13000-(Date.now()-t0))));
     try{const req={model:pv.model,temperature:0,max_tokens:2000,messages:[{role:"user",content:prompt}]};
       if(gem&&!noEffort.has(pv.model))req.reasoning_effort="low"; // thinking models otherwise spend the whole budget thinking
       const r=await fetch(pv.base+"/chat/completions",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+pv.key.trim()},body:JSON.stringify(req)});
       if(!r.ok){const et=(await r.text()).slice(0,300);console.error("ai",pv.name,r.status,et.slice(0,200));
         if(r.status===400&&req.reasoning_effort&&/reasoning|effort|thinking/i.test(et)){noEffort.add(pv.model);continue}
-        if(r.status===429||r.status===402||r.status===404||r.status>=500)cool.set(pv.name,Date.now()+(r.status===404?3600000:r.status===429?(/quota/i.test(et)?600000:60000):20000));continue}
+        if(r.status===429||r.status===402||r.status===404||r.status>=500)cool.set(pv.name,Date.now()+(r.status===404?3600000:r.status===429?(/quota/i.test(et)?1800000:120000):300000));continue}
       const j=await r.json();let txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"";
       txt=txt.replace(/<think>[\s\S]*?<\/think>/g,"");
       const o=parseVerdict(txt);if(!o){console.error("ai",pv.name,"no json",txt.slice(0,160));continue}
@@ -123,7 +127,7 @@ Reply with JSON only, no other text: {"what": "what it is, at most 6 words", "va
       lastGood=pv.name;st.judge[key]=res;
       if(res.valid&&catId){const L=st.extra[catId]=st.extra[catId]||[];const e=L.find(x=>x.name===res.name);if(e){if(!e.keys.includes(input))e.keys.push(input)}else if(L.length<2000)L.push({name:res.name,tier:res.tier,keys:[input]})}
       dirty=true;return res;
-    }catch(e){console.error("ai",pv.name,e.message);cool.set(pv.name,Date.now()+60000)}finally{clearTimeout(to)}
+    }catch(e){console.error("ai",pv.name,e.message);cool.set(pv.name,Date.now()+300000)}finally{clearTimeout(to)}
   }
   return null}
 
