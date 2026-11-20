@@ -10,6 +10,16 @@ const PROVIDERS=[
 ].filter(p=>p.key&&p.key.trim());
 const AI_KEY=PROVIDERS.length?"on":"";
 const AI_MODEL=PROVIDERS.map(p=>p.name+":"+p.model).join(", ");
+// Pick a model the key can actually use: prefer the largest Gemma (open model), else a Gemini Flash model.
+(async()=>{for(const pv of PROVIDERS){if(pv.name!=="google")continue;
+  try{const r=await fetch(pv.base+"/models",{headers:{"Authorization":"Bearer "+pv.key.trim()}});const j=await r.json();
+    const ids=(j.data||[]).map(m=>String(m.id).replace(/^models\//,""));console.log("google models:",ids.filter(i=>/gemma|flash/.test(i)).join(" "));
+    if(ids.includes(pv.model))continue;
+    const size=i=>{const m=i.match(/(\d+)b/);return m?+m[1]:0};
+    const gem=ids.filter(i=>/^gemma/.test(i)&&!/embed|vision|e\d+b|nano/.test(i)).sort((a,b)=>size(b)-size(a)||b.localeCompare(a));
+    const fl=ids.filter(i=>/^gemini-[\d.]+-flash(-lite)?$/.test(i)).sort().reverse();
+    const pick=gem[0]||fl[0];if(pick){console.log("google model",pv.model,"->",pick);pv.model=pick}
+  }catch(e){console.error("google models",e.message)}}})();
 const cool=new Map(); // provider -> time until which it is skipped after a quota error
 fs.mkdirSync(DATA_DIR,{recursive:true});
 const STATE=path.join(DATA_DIR,"state.json");
@@ -68,7 +78,7 @@ Reply with JSON only, no other text: {"valid": true or false, "name": "the answe
     const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),12000);
     try{const r=await fetch(pv.base+"/chat/completions",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+pv.key.trim()},
         body:JSON.stringify({model:pv.model,temperature:0,max_tokens:400,messages:[{role:"user",content:prompt}]})});
-      if(!r.ok){console.error("ai",pv.name,r.status,(await r.text()).slice(0,200));if(r.status===429||r.status===402||r.status>=500)cool.set(pv.name,Date.now()+(r.status===429?60000:300000));continue}
+      if(!r.ok){console.error("ai",pv.name,r.status,(await r.text()).slice(0,200));if(r.status===429||r.status===402||r.status===404||r.status>=500)cool.set(pv.name,Date.now()+(r.status===429?60000:300000));continue}
       const j=await r.json();let txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"";
       txt=txt.replace(/<think>[\s\S]*?<\/think>/g,"");
       const m=txt.match(/\{[\s\S]*?\}/);if(!m){console.error("ai",pv.name,"no json",txt.slice(0,120));continue}
