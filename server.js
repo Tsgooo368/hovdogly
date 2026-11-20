@@ -102,34 +102,38 @@ When in doubt, answer valid=false.
 Also rate how many players would think of it: 1 = very common, 2 = common, 3 = uncommon, 4 = rare. Most valid answers are 2 or 3; use 4 only for genuinely obscure but correct answers.
 Reply with JSON only, no other text: {"what": "what it is, at most 6 words", "valid": true or false, "name": "its standard name in Mongolian Cyrillic", "tier": 1-4}`;
   const tries=[];for(const p of PROVIDERS)for(const m of (p.models||[p.model]))tries.push(Object.assign({},p,{model:m,name:p.name+":"+m}));
-  // order: one healthy strong model (short wait), then the model that answered last, then fast lite models, then the rest
+  // fastest first: the model that answered last, then the quick lite models, then the big ones as backup
   const ok=t=>(cool.get(t.name)||0)<=Date.now(),isLite=t=>/lite/.test(t.model);
-  const strong=tries.find(t=>!isLite(t)&&ok(t)),last=tries.find(t=>t.name===lastGood);
-  const order=[...new Set([strong,last,...tries.filter(isLite),...tries].filter(Boolean))];tries.length=0;tries.push(...order);
-  // every model is cooling down: try the least recently failed one anyway
-  if(tries.every(t=>(cool.get(t.name)||0)>Date.now())&&tries.length){const t=tries.slice().sort((a,b)=>(cool.get(a.name)||0)-(cool.get(b.name)||0))[0];cool.delete(t.name)}
-  const t0=Date.now();
-  for(const pv of tries){
-    if((cool.get(pv.name)||0)>Date.now())continue;
-    if(Date.now()-t0>11000)break; // the player is waiting: give up rather than hang
-    const gem=/gemini/.test(pv.model);
-    const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),Math.max(2500,Math.min(pv===tries[0]&&!isLite(pv)?5000:8000,13000-(Date.now()-t0))));
-    try{const req={model:pv.model,temperature:0,max_tokens:2000,messages:[{role:"user",content:prompt}]};
-      if(gem&&!noEffort.has(pv.model))req.reasoning_effort="low"; // thinking models otherwise spend the whole budget thinking
-      const r=await fetch(pv.base+"/chat/completions",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+pv.key.trim()},body:JSON.stringify(req)});
-      if(!r.ok){const et=(await r.text()).slice(0,300);console.error("ai",pv.name,r.status,et.slice(0,200));
-        if(r.status===400&&req.reasoning_effort&&/reasoning|effort|thinking/i.test(et)){noEffort.add(pv.model);continue}
-        if(r.status===429||r.status===402||r.status===404||r.status>=500)cool.set(pv.name,Date.now()+(r.status===404?3600000:r.status===429?(/quota/i.test(et)?1800000:120000):300000));continue}
-      const j=await r.json();let txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"";
-      txt=txt.replace(/<think>[\s\S]*?<\/think>/g,"");
-      const o=parseVerdict(txt);if(!o){console.error("ai",pv.name,"no json",txt.slice(0,160));continue}
-      const res={valid:o.valid===true,name:clean(o.name||input,40),tier:Math.max(1,Math.min(4,Math.round(+o.tier||3))),by:pv.model,what:clean(o.what,80)};
-      lastGood=pv.name;st.judge[key]=res;
-      if(res.valid&&catId){const L=st.extra[catId]=st.extra[catId]||[];const e=L.find(x=>x.name===res.name);if(e){if(!e.keys.includes(input))e.keys.push(input)}else if(L.length<2000)L.push({name:res.name,tier:res.tier,keys:[input]})}
-      dirty=true;return res;
-    }catch(e){console.error("ai",pv.name,e.message);cool.set(pv.name,Date.now()+300000)}finally{clearTimeout(to)}
-  }
-  return null}
+  const last=tries.find(t=>t.name===lastGood);
+  let order=[...new Set([last,...tries.filter(isLite),...tries].filter(Boolean))].filter(ok);
+  if(!order.length&&tries.length)order=[tries.slice().sort((a,b)=>(cool.get(a.name)||0)-(cool.get(b.name)||0))[0]];
+  // hedged calls: if the current model has not answered in 2.5 s, ask the next one too; first good answer wins (max ~9 s)
+  const o=await new Promise(done=>{let i=0,live=0,fin=false;const ctls=[];
+    const finish=v=>{if(fin)return;fin=true;clearTimeout(cap);clearTimeout(nextT);for(const c of ctls){c.cancelled=true;c.abort()}done(v)};
+    const cap=setTimeout(()=>finish(null),9000);let nextT=null;
+    const launch=()=>{if(fin)return;if(i>=order.length){if(!live)finish(null);return}const pv=order[i++];live++;const ctl=new AbortController();ctls.push(ctl);
+      clearTimeout(nextT);nextT=setTimeout(launch,2500);
+      callModel(pv,prompt,ctl).then(v=>{live--;if(v){v.by=pv.model;lastGood=pv.name;finish(v)}else{clearTimeout(nextT);launch()}})};
+    launch()});
+  if(!o)return null;
+  const res={valid:o.valid===true,name:clean(o.name||input,40),tier:Math.max(1,Math.min(4,Math.round(+o.tier||3))),by:o.by,what:clean(o.what,80)};
+  st.judge[key]=res;
+  if(res.valid&&catId){const L=st.extra[catId]=st.extra[catId]||[];const e=L.find(x=>x.name===res.name);if(e){if(!e.keys.includes(input))e.keys.push(input)}else if(L.length<2000)L.push({name:res.name,tier:res.tier,keys:[input]})}
+  dirty=true;return res}
+// one model call; returns the parsed verdict or null (and cools the model down on errors)
+async function callModel(pv,prompt,ctl){
+  const to=setTimeout(()=>ctl.abort(),8000);
+  try{const req={model:pv.model,temperature:0,max_tokens:2000,messages:[{role:"user",content:prompt}]};
+    if(/gemini/.test(pv.model)&&!noEffort.has(pv.model))req.reasoning_effort=/lite/.test(pv.model)?"none":"low"; // thinking models otherwise spend the whole budget thinking
+    const r=await fetch(pv.base+"/chat/completions",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+pv.key.trim()},body:JSON.stringify(req)});
+    if(!r.ok){const et=(await r.text()).slice(0,300);console.error("ai",pv.name,r.status,et.slice(0,200));
+      if(r.status===400&&req.reasoning_effort&&/reasoning|effort|thinking|budget/i.test(et)){noEffort.add(pv.model);return null}
+      if(r.status===429||r.status===402||r.status===404||r.status>=500)cool.set(pv.name,Date.now()+(r.status===404?3600000:r.status===429?(/quota/i.test(et)?1800000:120000):300000));return null}
+    const j=await r.json();let txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"";
+    txt=txt.replace(/<think>[\s\S]*?<\/think>/g,"");
+    const o=parseVerdict(txt);if(!o)console.error("ai",pv.name,"no json",txt.slice(0,160));return o;
+  }catch(e){if(ctl.cancelled)return null; // another model already answered
+    console.error("ai",pv.name,e.message);cool.set(pv.name,Date.now()+120000);return null}finally{clearTimeout(to)}}
 
 
 // ---- rooms: play the same prompts with friends ----
