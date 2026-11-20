@@ -531,9 +531,10 @@ function ask(){
 }
 function timerLoop(){
   const c=game&&game.cur;if(!c||c.done)return;
-  const S=game.secs;const left=Math.max(0,c.deadline?(c.deadline-srvNow())/1000:S-(performance.now()-c.start)/1000);const sec=Math.ceil(left);
+  const S=game.secs;const now=c.checking&&!c.deadline?c.pauseAt:performance.now();const left=Math.max(0,c.deadline?(c.deadline-srvNow())/1000:S-(now-c.start)/1000);const sec=Math.ceil(left);
   if(sec!==c.lastSec){c.lastSec=sec;$("#secs").textContent=sec;drawTimer(Math.min(1,left/S),left<Math.min(8,S/3));if(sec<=5&&sec>0)SFX.tick()}
-  if(left<=0){resolve(null,"time");return}
+  // while the AI is checking an answer the clock does not run out (solo: it is paused)
+  if(left<=0&&!c.checking){resolve(null,"time");return}
   game.raf=requestAnimationFrame(timerLoop);
 }
 let sampler=null;
@@ -560,9 +561,10 @@ Reply with JSON only: {"valid": true or false, "name": "the answer's standard na
 }
 $("#af").onsubmit=async e=>{e.preventDefault();if(!game||!game.cur||game.cur.done||game.cur.checking)return;const v=$("#ain").value.trim();if(!v)return;
   const cur=game.cur;let a=match(cur.cat,v);
-  if(!a&&sampler){cur.checking=true;$("#miss").textContent="Шалгаж байна...";$("#ain").readOnly=true;
-    a=await aiJudge(cur.cat,v);cur.checking=false;$("#ain").readOnly=false;
-    if(game.cur!==cur||cur.done)return;}
+  if(!a&&sampler){cur.checking=true;cur.pauseAt=performance.now();$("#miss").textContent="AI шалгаж байна... (цаг зогссон)";$("#ain").readOnly=true;
+    a=await aiJudge(cur.cat,v);cur.checking=false;cur.start+=performance.now()-cur.pauseAt;$("#ain").readOnly=false;
+    if(game.cur!==cur||cur.done)return;
+    if(!a&&cur.deadline&&cur.deadline<=srvNow()){resolve(null,"time");return}}
   if(!a){const f=$("#af");f.classList.remove("shake");void f.offsetWidth;f.classList.add("shake");$("#miss").textContent=`«${v}» тохирохгүй байна. Дахиад бич!`;$("#ain").select();SFX.miss();say("miss");scene.stumble=.6;return}
   resolve(a,"ok")};
 $("#quitBtn").onclick=()=>{if(!game)return;SFX.click();clearTimeout(game.revealT);clearTimeout(game.nextT);if(game.cur)game.cur.done=true;cancelAnimationFrame(game.raf);if(game.room)roomLeave();if(game.res.length)end();else home()};
@@ -797,7 +799,7 @@ function webApi(){
                     set:async doc=>post("/api/"+path.replace("players/","player/"),{token:tok,doc})}),
         collection:()=>({onSnapshot:cb=>{const load=()=>fetch("/api/players").then(r=>r.json()).then(list=>cb({docs:list.map(x=>({id:x.id,data:()=>x.doc}))})).catch(()=>{});
           load();setInterval(()=>{if(!document.hidden)load()},30000)}})},
-    sample:{web:true,judge:async(q,common,input,cat)=>{const r=await post("/api/judge",{q,common,input,cat});if(!r||r.unavailable)return null;return r}},
+    sample:{web:true,judge:async(q,common,input,cat)=>{const r=await fetch("/api/judge",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({q,common,input,cat}),signal:AbortSignal.timeout(16000)}).then(r=>r.json()).catch(()=>null);if(!r||r.unavailable)return null;return r}},
     room:{presence:async p=>{pres=p;ping()},onPeers:cb=>{peersCb=cb},on:(t,cb)=>{if(t==="find")findCb=cb},
           emit:async(t,d)=>{if(t==="find")post("/api/find",Object.assign({id},d))}}};
   return{use:async k=>api[k]||null};
