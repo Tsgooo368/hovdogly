@@ -10,6 +10,8 @@ const STATE=path.join(DATA_DIR,"state.json");
 let st={players:{},judge:{}};
 try{st=Object.assign(st,JSON.parse(fs.readFileSync(STATE,"utf8")))}catch(e){}
 let dirty=false;
+function flush(){if(dirty){dirty=false;try{fs.writeFileSync(STATE,JSON.stringify(st))}catch(e){}}}
+for(const sig of ["SIGTERM","SIGINT"])process.on(sig,()=>{flush();process.exit(0)});
 setInterval(()=>{if(!dirty)return;dirty=false;const tmp=STATE+".tmp";fs.writeFile(tmp,JSON.stringify(st),e=>{if(!e)fs.rename(tmp,STATE,()=>{})})},5000);
 const sha=s=>crypto.createHash("sha256").update(String(s)).digest("hex");
 
