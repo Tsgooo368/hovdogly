@@ -20,7 +20,7 @@ const AI_MODEL=PROVIDERS.map(p=>p.name+":"+p.model).join(", ");
     const list=[...new Set([...(process.env.GEMINI_MODEL?[process.env.GEMINI_MODEL]:[]),...gem,...fl])].filter(i=>ids.includes(i));
     if(list.length)pv.models=list;console.log("google models to try:",pv.models.join(", "));
   }catch(e){console.error("google models",e.message)}}})();
-const cool=new Map(); // provider -> time until which it is skipped after a quota error
+const cool=new Map();let lastGood=""; // provider -> time until which it is skipped after a quota error
 fs.mkdirSync(DATA_DIR,{recursive:true});
 const STATE=path.join(DATA_DIR,"state.json");
 let st={players:{},judge:{},extra:{}};
@@ -74,9 +74,12 @@ Decide whether it is a valid answer. Be generous and playful: accept it when you
 Rate how rare it is among answers people would give: 1 = very common, 2 = fairly common, 3 = uncommon, 4 = rare, 5 = very rare but clearly valid.
 Reply with JSON only, no other text: {"valid": true or false, "name": "the answer's standard name in Mongolian Cyrillic", "tier": 1-5}`;
   const tries=[];for(const p of PROVIDERS)for(const m of (p.models||[p.model]))tries.push(Object.assign({},p,{model:m,name:p.name+":"+m}));
+  tries.sort((a,b)=>(b.name===lastGood)-(a.name===lastGood));
+  // every model is cooling down: try the least recently failed one anyway
+  if(tries.every(t=>(cool.get(t.name)||0)>Date.now())&&tries.length){const t=tries.slice().sort((a,b)=>(cool.get(a.name)||0)-(cool.get(b.name)||0))[0];cool.delete(t.name)}
   for(const pv of tries){
     if((cool.get(pv.name)||0)>Date.now())continue;
-    const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),12000);
+    const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),pv.slow?9000:6000);
     try{const r=await fetch(pv.base+"/chat/completions",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+pv.key.trim()},
         body:JSON.stringify({model:pv.model,temperature:0,max_tokens:400,messages:[{role:"user",content:prompt}]})});
       if(!r.ok){console.error("ai",pv.name,r.status,(await r.text()).slice(0,200));if(r.status===429||r.status===402||r.status===404||r.status>=500)cool.set(pv.name,Date.now()+(r.status===404?3600000:r.status===429?60000:20000));continue}
@@ -85,10 +88,10 @@ Reply with JSON only, no other text: {"valid": true or false, "name": "the answe
       const m=txt.match(/\{[\s\S]*?\}/);if(!m){console.error("ai",pv.name,"no json",txt.slice(0,120));continue}
       const o=JSON.parse(m[0]);
       const res={valid:o.valid===true,name:clean(o.name||input,40),tier:Math.max(1,Math.min(5,Math.round(+o.tier||4))),by:pv.model};
-      st.judge[key]=res;
+      lastGood=pv.name;st.judge[key]=res;
       if(res.valid&&catId){const L=st.extra[catId]=st.extra[catId]||[];const e=L.find(x=>x.name===res.name);if(e){if(!e.keys.includes(input))e.keys.push(input)}else if(L.length<2000)L.push({name:res.name,tier:res.tier,keys:[input]})}
       dirty=true;return res;
-    }catch(e){console.error("ai",pv.name,e.message)}finally{clearTimeout(to)}
+    }catch(e){console.error("ai",pv.name,e.message);cool.set(pv.name,Date.now()+60000)}finally{clearTimeout(to)}
   }
   return null}
 
