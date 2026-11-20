@@ -1,5 +1,5 @@
 // Ховдоглы: static game + small API (players, presence, AI judge). No dependencies.
-const http=require("http"),fs=require("fs"),path=require("path"),crypto=require("crypto");
+const http=require("http"),fs=require("fs"),path=require("path"),crypto=require("crypto"),zlib=require("zlib");
 const PORT=+process.env.PORT||8080;
 const DATA_DIR=process.env.DATA_DIR||path.join(__dirname,"data");
 // AI providers, tried in order; when one is out of quota the next one answers.
@@ -167,6 +167,55 @@ async function roomApi(req,res,p){
   if(act==="again"){r.phase="lobby";r.cats=[];r.start=0;for(const q of r.players.values())q.ans={};return ok(r)}
   return bad(404,"nf")}
 
+// gzip text files (the answer lists are big)
+const zcache=new Map();
+function sendZ(req,res,data,type,cache){const buf=Buffer.isBuffer(data)?data:Buffer.from(data);
+  if(!/gzip/.test(req.headers["accept-encoding"]||"")||!/text|json|javascript|svg/.test(type))return send(res,200,buf,type,{"Cache-Control":cache});
+  const k=sha(buf);let z=zcache.get(k);if(!z){z=zlib.gzipSync(buf,{level:9});if(zcache.size>20)zcache.clear();zcache.set(k,z)}
+  send(res,200,z,type,{"Cache-Control":cache,"Content-Encoding":"gzip","Vary":"Accept-Encoding"})}
+
+// ---- how well known is each answer: Wikipedia readers (60 days) and number of language editions ----
+// used to order named-thing categories (countries, people, brands, animals...) from common to rare, mixed 50/50 with the AI order
+const WIKI=path.join(DATA_DIR,"wiki.json");let wiki={};try{wiki=JSON.parse(fs.readFileSync(WIKI,"utf8"))}catch(e){}
+const ENT=c=>/^(b_|c_|d_)/.test(c)||/^(a_carbrand|a_techbrand|a_sportbrand|a_fashion|a_candy|a_softdrink|a_fastfood|a_cheese|a_dish|a_coffee|a_sauce|a_spice|a_fabric)$/.test(c);
+const eng=names=>{for(const n of names.slice(1)){if(/^[A-Za-z][A-Za-z0-9 .'&\-]{1,60}$/.test(n)&&/[aeiou]/i.test(n))return n.trim()}return null};
+let catsRaw=[];try{catsRaw=JSON.parse(fs.readFileSync(path.join(PUB,"cats.json"),"utf8"))}catch(e){}
+let catsOut=null;
+function rankCats(){
+  const out=catsRaw.map(c=>{if(!ENT(c.id)||!Array.isArray(c.a)||c.extend)return c;const n=c.a.length;
+    const sc=c.a.map((e,i)=>{const w=wiki[eng(e)];return {e,ai:i/n,w:w&&w.v>=0?Math.log10(1+w.v)+1.5*Math.log10(1+(w.l||0)):null}});
+    const ws=sc.filter(x=>x.w!=null).map(x=>x.w).sort((a,b)=>b-a);if(ws.length<n*0.4)return c;
+    for(const x of sc)x.s=x.w==null?x.ai:(x.ai+ws.indexOf(x.w)/ws.length)/2;
+    return Object.assign({},c,{a:sc.slice().sort((a,b)=>a.s-b.s).map(x=>x.e)})});
+  catsOut=JSON.stringify(out)}
+rankCats();
+async function wikiJob(){
+  const todo=new Set();for(const c of catsRaw)if(ENT(c.id)&&Array.isArray(c.a))for(const e of c.a){const t=eng(e);if(t&&!(t in wiki))todo.add(t)}
+  const list=[...todo];if(!list.length)return;console.log("wiki: looking up",list.length,"names");
+  const H={headers:{"User-Agent":"HovdoglyGame/1.0 (rare-answer trivia game)"}};const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  for(let i=0;i<list.length;i+=50){const part=list.slice(i,i+50);
+    try{const j=await (await fetch("https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&redirects=1&prop=pageviews|pageprops&ppprop=wikibase_item|disambiguation&pvipdays=60&titles="+encodeURIComponent(part.join("|")),H)).json();
+      const to=new Map(part.map(t=>[t,t]));
+      for(const n of (j.query&&j.query.normalized)||[])for(const [k,v] of to)if(v===n.from)to.set(k,n.to);
+      for(const r of (j.query&&j.query.redirects)||[])for(const [k,v] of to)if(v===r.from)to.set(k,r.to);
+      const pages=new Map(((j.query&&j.query.pages)||[]).map(p=>[p.title,p]));const q2t={};
+      for(const t of part){const pg=pages.get(to.get(t));
+        if(!pg||pg.missing||(pg.pageprops&&"disambiguation" in pg.pageprops)){wiki[t]={v:-1};continue}
+        wiki[t]={v:Object.values(pg.pageviews||{}).reduce((a,b)=>a+(b||0),0),l:0};
+        const q=pg.pageprops&&pg.pageprops.wikibase_item;if(q)(q2t[q]=q2t[q]||[]).push(t)}
+      const ids=Object.keys(q2t);
+      if(ids.length){const j2=await (await fetch("https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=sitelinks&ids="+ids.join("|"),H)).json();
+        for(const [q,en] of Object.entries(j2.entities||{})){const l=Object.keys(en.sitelinks||{}).filter(k=>/wiki$/.test(k)&&!/^(commons|species|meta|simple)wiki$/.test(k)).length;for(const t of q2t[q]||[])wiki[t].l=l}}
+    }catch(e){console.error("wiki",e.message);await wait(5000)}
+    if(i%2000===0)fs.writeFile(WIKI,JSON.stringify(wiki),()=>{});
+    await wait(250)}
+  fs.writeFileSync(WIKI,JSON.stringify(wiki));rankCats();
+  const got=list.filter(t=>wiki[t]&&wiki[t].v>=0).length;console.log("wiki: done,",got,"of",list.length,"found")}
+setTimeout(()=>wikiJob().catch(e=>console.error("wiki job",e.message)),5000);
+// what the ranking did, for checking: /api/rank/<category id>
+function rankInfo(id){const c=JSON.parse(catsOut).find(x=>x.id===id);if(!c)return null;
+  return c.a.map((e,i)=>{const w=wiki[eng(e)];return [i+1,e[0],eng(e),w?w.v:null,w?w.l:null]})}
+
 http.createServer(async(req,res)=>{
   const u=new URL(req.url,"http://x");const p=u.pathname;
   try{
@@ -193,12 +242,14 @@ http.createServer(async(req,res)=>{
       const b=await body(req,4000);const q=clean(b.q,140),common=clean(b.common,400),input=clean(b.input,60),catId=clean(b.cat,40);
       if(!q||!input)return send(res,400,{err:"bad"});
       const r=await judge(q,common,input,catId);return send(res,200,r||{unavailable:true})}
+    if(p.startsWith("/api/rank/")){const r=rankInfo(clean(p.slice(10),40));return send(res,r?200:404,r||{err:"nf"})}
     if(p.startsWith("/api/room/"))return await roomApi(req,res,p);
     if(p.startsWith("/api/"))return send(res,404,{err:"nf"});
     // static
+    if(p==="/cats.json"&&catsOut)return sendZ(req,res,catsOut,TYPES[".json"],"no-cache");
     let f=p==="/"?"/index.html":decodeURIComponent(p);const full=path.normalize(path.join(PUB,f));
     if(!full.startsWith(PUB))return send(res,403,"no","text/plain");
     fs.readFile(full,(e,data)=>{if(e)return send(res,404,"Not found","text/plain");
-      send(res,200,data,TYPES[path.extname(full)]||"application/octet-stream",{"Cache-Control":f.endsWith(".html")?"no-cache":"public, max-age=3600"})});
+      sendZ(req,res,data,TYPES[path.extname(full)]||"application/octet-stream",/\.(html|json)$/.test(f)?"no-cache":"public, max-age=3600")});
   }catch(e){send(res,400,{err:"bad"})}
 }).listen(PORT,()=>console.log("Ховдоглы on",PORT,"ai:",AI_KEY?AI_MODEL:"off"));

@@ -411,7 +411,12 @@ function rng(seed){let a=seed;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a
 // Mongolian set is marked so a game draws at most one of them
 for(const c of CATS)c.mn=true;
 function rankTier(i,n){const f=i/n;return f<.1?1:f<.25?2:f<.45?3:f<.75?4:5}
-function addCats(list){for(const raw of list){if(!raw||!raw.id||CATMAP[raw.id]||!Array.isArray(raw.a)||raw.a.length<10)continue;const n=raw.a.length;
+function addCats(list){for(const raw of list){
+  // extra rare answers for a built-in category
+  if(raw&&raw.extend&&CATMAP[raw.id]&&Array.isArray(raw.a)){const c=CATMAP[raw.id];const have=new Set(c.ans.map(a=>a.id));
+    raw.a.forEach((names,i)=>{if(!Array.isArray(names)||!names[0])return;const id=loose(names[0]);if(!id||have.has(id))return;have.add(id);
+      c.ans.push({id,name:names[0],tier:i<raw.a.length/2?4:5,keys:names.map(x=>({c:cyrNorm(String(x)),l:loose(String(x))}))})});c.total=c.ans.length;continue}
+  if(!raw||!raw.id||CATMAP[raw.id]||!Array.isArray(raw.a)||raw.a.length<10)continue;const n=raw.a.length;
   const c={id:raw.id,q:raw.q,ans:[],mn:false};const seen=new Set();
   raw.a.forEach((names,i)=>{if(!Array.isArray(names)||!names[0])return;const id=loose(names[0]);if(!id||seen.has(id))return;seen.add(id);
     c.ans.push({id,name:names[0],tier:rankTier(i,n),keys:names.map(x=>({c:cyrNorm(String(x)),l:loose(String(x))}))})});
