@@ -421,7 +421,7 @@ function addCats(list){for(const raw of list){
   raw.a.forEach((names,i)=>{if(!Array.isArray(names)||!names[0])return;const id=loose(names[0]);if(!id||seen.has(id))return;seen.add(id);
     c.ans.push({id,name:names[0],tier:rankTier(i,n),keys:names.map(x=>({c:cyrNorm(String(x)),l:loose(String(x))}))})});
   c.total=c.ans.length;CATS.push(c);CATMAP[c.id]=c}}
-let dataReady=fetch("cats.json").then(r=>r.ok?r.json():[]).then(addCats).catch(()=>{});
+let dataReady=fetch("cats.json?v=bb7740ab").then(r=>r.ok?r.json():[]).then(addCats).catch(()=>{});
 function pickCats(seed,n=7){const r=rng(seed);const arr=CATS.map(c=>c.id);for(let i=arr.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}
   const out=[];let mn=0;for(const id of arr){if(CATMAP[id].mn){if(mn>=1)continue;mn++}out.push(id);if(out.length>=n)break}return out}
 const pick=a=>a[Math.floor(Math.random()*a.length)];
