@@ -1,4 +1,6 @@
-<title>Hovdogly</title>
+<title>Ховдоглы</title>
+<meta name="description" content="Ховор хариулт тусам хол давхина. Монгол хэлний ховор хариултын тоглоом.">
+<link rel="icon" id="favicon" href="data:,">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Handjet:wght@400;500;600;700;800&family=Press+Start+2P&display=swap">
@@ -64,7 +66,27 @@ button{cursor:pointer}
 
 .title{font-family:var(--f-pix);font-weight:400;font-size:clamp(28px,8.6vw,72px);line-height:1;margin:0;color:var(--gold-l);letter-spacing:.02em;
   text-shadow:3px 3px 0 var(--gold),6px 6px 0 var(--gold-d),9px 9px 0 var(--red-d),12px 12px 0 #1A0E04}
-.title-wrap{animation:float 3s steps(6) infinite}
+.title-wrap{animation:float 3s steps(6) infinite;display:flex;align-items:center;gap:clamp(8px,2vw,18px)}
+.logo{width:clamp(48px,11vw,96px);height:auto;aspect-ratio:20/18;image-rendering:pixelated;filter:drop-shadow(4px 4px 0 #1A0E04)}
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+.opts button{padding:6px 12px;border:0;background:#2A2C5E;box-shadow:0 0 0 2px #08081A;font-weight:600;font-size:20px;display:inline-flex;align-items:center;gap:6px}
+.opts button[aria-pressed="true"]{background:var(--gold);color:#2A1300}
+.opts .sw{width:16px;height:16px;box-shadow:0 0 0 2px #08081A}
+.prev{display:block;width:150px;height:120px;image-rendering:pixelated;margin:4px auto 8px;background:linear-gradient(#A8DBFF 70%,#7CC04F 70%);box-shadow:0 0 0 3px #08081A}
+.code{font-family:var(--f-pix);font-size:34px;color:var(--gold-l);letter-spacing:.2em;text-align:center;margin:6px 0 4px}
+.plist{list-style:none;padding:0;margin:8px 0 14px}
+.plist li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:2px dashed rgba(255,255,255,.08);font-size:21px}
+.plist li b{font-family:var(--f-pix);font-size:11px;color:var(--gold-l);font-weight:400}
+.others{margin-top:10px;display:flex;flex-direction:column;gap:4px;font-size:19px;color:var(--ink-2);text-shadow:2px 2px 0 #120E2A;max-width:100%}
+.others b{color:var(--ink)}
+.gate{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(5,4,18,.75);padding:16px}
+.gate[hidden]{display:none}
+.gate .panel{width:100%;max-width:440px;padding:22px 20px 18px;text-align:center}
+.gate h3{font-family:var(--f-pix);font-size:13px;font-weight:400;color:var(--gold-l);margin:10px 0 8px}
+.gate p{margin:0 0 14px;color:var(--ink-2);font-size:20px}
+.gate input{width:100%;background:#08081C;border:0;box-shadow:inset 0 0 0 3px #3A3C7A;padding:10px 12px;font-size:26px;font-weight:600;text-align:center;outline:none;margin-bottom:12px}
+.gate input:focus{box-shadow:inset 0 0 0 3px var(--gold)}
+.gate .err{color:#FFB0A0;min-height:1.2em;font-size:18px;margin:-6px 0 8px}
 @keyframes float{50%{transform:translateY(-6px)}}
 .sub{margin:22px 0 0;font-size:clamp(22px,6vw,30px);font-weight:600;color:#fff;text-shadow:2px 2px 0 #1A1440,0 0 12px rgba(0,0,0,.5)}
 .sub em{font-style:normal;color:var(--gold-l)}
@@ -111,6 +133,8 @@ button{cursor:pointer}
 .miss{font-size:21px;font-weight:600;color:#FFB0A0;min-height:1.4em;text-shadow:2px 2px 0 #120E2A;text-align:center}
 .cta{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
 .cta .go{font-size:13px;padding:16px 20px 18px}
+#dStart .cta{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;width:100%;max-width:520px}
+#dStart .cta #goDaily{grid-column:1/-1}
 .foot{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-size:20px;font-weight:600}
 .foot button{background:none;border:0;padding:4px;color:var(--ink);text-shadow:2px 2px 0 #120E2A;border-bottom:2px dashed rgba(255,255,255,.4)}
 .online{display:inline-flex;align-items:center;gap:6px;text-shadow:2px 2px 0 #120E2A}
@@ -197,7 +221,7 @@ tr.me td{color:var(--gold-l)}
 
   <div class="stage">
     <div class="view" id="vStart">
-      <div class="title-wrap"><h1 class="title">HOVDOGLY</h1></div>
+      <div class="title-wrap"><canvas class="logo" id="logo" width="20" height="18" aria-hidden="true"></canvas><h1 class="title">ХОВДОГЛЫ</h1></div>
       <p class="sub">Ховор хариулт тусам <em>хол давхина</em></p>
       <div class="ladder" id="ladder"></div>
     </div>
@@ -215,11 +239,12 @@ tr.me td{color:var(--gold-l)}
   <div class="dock" id="dStart">
     <div class="cta">
       <button class="go" id="goDaily">ӨДРИЙН АЯЛАЛ</button>
-      <button class="go ghost" id="goFree">ХЯЗГААРГҮЙ</button>
+      <button class="go ghost" id="goFree">ГАНЦААРАА</button>
+      <button class="go ghost" id="goRoom">НАЙЗУУДТАЙ</button>
     </div>
     <div class="foot">
       <span class="online" id="online" hidden><i></i><span id="onlineTxt"></span></span>
-      <button data-sheet="album">Ховдог цүнх</button><button data-sheet="board">Эрэмбэ</button><button data-sheet="help">Заавар</button>
+      <button data-sheet="album">Ховдог цүнх</button><button data-sheet="board">Эрэмбэ</button><button data-sheet="settings">Тохиргоо</button><button data-sheet="help">Заавар</button>
     </div>
   </div>
   <div class="dock" id="dAnswer" hidden>
@@ -239,6 +264,16 @@ tr.me td{color:var(--gold-l)}
 
 <div class="mascot" id="mascot" aria-live="polite"><canvas id="mcv" width="20" height="18" aria-hidden="true"></canvas><div class="bubble" id="bubble"></div></div>
 <div class="panel toast" id="toast" hidden></div>
+<div class="gate" id="gate" hidden>
+  <form class="panel" id="gateF" autocomplete="off">
+    <canvas class="logo" id="logo2" width="20" height="18" aria-hidden="true" style="width:72px"></canvas>
+    <h3>ХОВДОГЛЫД ТАВТАЙ МОРИЛ</h3>
+    <p>Тоглохын тулд нэрээ оруулна уу. Энэ нэр онооны самбар, найзуудын өрөөнд харагдана.</p>
+    <input id="gateName" maxlength="16" placeholder="Таны нэр" aria-label="Таны нэр" autocapitalize="words" spellcheck="false">
+    <div class="err" id="gateErr"></div>
+    <button class="go" type="submit">ЭХЛЭХ ▶</button>
+  </form>
+</div>
 
 <div class="sheet" id="sheet" hidden>
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="shTitle">
@@ -382,8 +417,8 @@ function addCats(list){for(const raw of list){if(!raw||!raw.id||CATMAP[raw.id]||
     c.ans.push({id,name:names[0],tier:rankTier(i,n),keys:names.map(x=>({c:cyrNorm(String(x)),l:loose(String(x))}))})});
   c.total=c.ans.length;CATS.push(c);CATMAP[c.id]=c}}
 let dataReady=fetch("cats.json").then(r=>r.ok?r.json():[]).then(addCats).catch(()=>{});
-function pickCats(seed){const r=rng(seed);const arr=CATS.map(c=>c.id);for(let i=arr.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}
-  const out=[];let mn=0;for(const id of arr){if(CATMAP[id].mn){if(mn>=1)continue;mn++}out.push(id);if(out.length>=ROUNDS)break}return out}
+function pickCats(seed,n=7){const r=rng(seed);const arr=CATS.map(c=>c.id);for(let i=arr.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}
+  const out=[];let mn=0;for(const id of arr){if(CATMAP[id].mn){if(mn>=1)continue;mn++}out.push(id);if(out.length>=n)break}return out}
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const NICKS=["Хурдан хүлэг","Хээрийн бүргэд","Говийн тэмээ","Цэнхэр чоно","Алтайн ирвэс","Хангайн буга","Талын салхи","Ховдог хурга"];
 let me=LS.get("me",null);
@@ -431,12 +466,15 @@ function muteIcon(){$("#muteBtn").innerHTML=muted?'<svg viewBox="0 0 10 10" fill
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 $("#ladder").innerHTML=TIERS.slice(1).map((t,i)=>`<span style="color:var(${TC[i+1]})">${t.n.toUpperCase()} ${t.p}</span>`).join("");
-function show(view,dock){const q=$("#quitBtn");if(q)q.hidden=!(game&&view!=="vEnd");for(const v of ["vStart","vPrompt","vReveal","vEnd"])$("#"+v).hidden=v!==view;for(const d of ["dStart","dAnswer","dNext","dEnd"])$("#"+d).hidden=d!==dock}
+function show(view,dock){const q=$("#quitBtn");if(q)q.hidden=!(game&&view!=="vEnd");for(const v of ["vStart","vPrompt","vReveal","vEnd"])$("#"+v).hidden=v!==view;for(const d of ["dStart","dAnswer","dNext","dEnd"])$("#"+d).hidden=d!==dock;placeMascot()}
+// keep the marmot and its speech bubble just above whatever dock is showing
+function placeMascot(){requestAnimationFrame(()=>{const d=[...document.querySelectorAll(".dock")].find(x=>!x.hidden);const m=$("#mascot");if(!m||!d)return;m.style.bottom=(d.offsetHeight+8)+"px"})}
+addEventListener("resize",()=>placeMascot());
 function pips(){const el=$("#pips");el.innerHTML="";
   if(game&&game.endless){for(let k=0;k<3;k++){const i=document.createElement("i");i.className="life"+(k<game.lives?"":" lost");el.appendChild(i)}$("#pipsL").textContent=`${game.i+1}-р асуулт`;return}
-  for(let k=0;k<ROUNDS;k++){const i=document.createElement("i");const r=game&&game.res[k];
+  const RN=game?game.rounds:7;for(let k=0;k<RN;k++){const i=document.createElement("i");const r=game&&game.res[k];
   if(r)i.style.background=r.tier?TCOL[r.tier]:"#333";else if(game&&k===game.i)i.className="on";el.appendChild(i)}
-  $("#pipsL").textContent=game?`${Math.min(game.i+1,ROUNDS)}/${ROUNDS}`:""}
+  $("#pipsL").textContent=game?`${Math.min(game.i+1,RN)}/${RN}`:""}
 function hudPts(){$("#hudPts").textContent=game?game.res.reduce((s,r)=>s+r.pts+(r.bonus||0),0):(me.best||0)}
 function flash(col){const f=$("#flash");f.style.transition="none";f.style.background=col;f.style.opacity=".45";requestAnimationFrame(()=>{f.style.transition="opacity .6s steps(4)";f.style.opacity="0"})}
 function jolt(){const a=$("#app");a.classList.remove("shake");void a.offsetWidth;a.classList.add("shake")}
@@ -465,22 +503,26 @@ function home(){
   $("#goDaily").onclick=done?()=>openSheet("board"):()=>{SFX.click();start("daily")};
   show("vStart","dStart");pips();hudPts();
 }
-async function start(mode){
+async function start(mode,opt){
   ac();await dataReady;
-  const endless=mode==="free";
+  let rounds=7,secs=30,cats=null;
+  if(mode==="free"){rounds=cfg.rounds;secs=cfg.secs}
+  if(mode==="room"){rounds=opt.rounds;secs=opt.secs;cats=opt.cats.filter(id=>CATMAP[id])}
+  const endless=mode==="free"&&rounds===0;
   const seed=mode==="daily"?hash("hovdogly-"+today()):Math.floor(Math.random()*1e9);
-  game={mode,endless,cats:endless?[]:pickCats(seed),i:0,res:[],streak:0,lives:3,used:new Set(),mn:0};
+  game={mode,endless,rounds:endless?0:(cats?cats.length:rounds),secs,cats:endless?[]:(cats||pickCats(seed,rounds)),i:0,res:[],streak:0,lives:3,used:new Set(),mn:0,room:opt&&opt.code};
   setPresence("playing");ask();
 }
 function nextEndlessCat(){const pool=CATS.filter(c=>!game.used.has(c.id)&&!(c.mn&&game.mn>=1));const c=pool.length?pool[Math.floor(Math.random()*pool.length)]:CATS[Math.floor(Math.random()*CATS.length)];game.used.add(c.id);if(c.mn)game.mn++;return c.id}
 function ask(){
-  if(!game.endless&&game.i>=ROUNDS)return end();
+  if(!game.endless&&game.i>=game.rounds)return end();
   if(game.endless&&game.lives<=0)return end();
   if(game.endless&&!game.cats[game.i])game.cats[game.i]=nextEndlessCat();
   const cat=CATMAP[game.cats[game.i]];
   game.cur={cat,start:performance.now(),done:false,lastSec:99};
-  scene.time=game.endless?Math.min(1,game.i/14):game.i/ROUNDS;
-  $("#pK").textContent=game.endless?`АСУУЛТ ${game.i+1} · ∞`:`АСУУЛТ ${game.i+1}/${ROUNDS}`;$("#pQ").textContent=cat.q;$("#miss").textContent="";
+  if(game.room){const t0=roomState.start+game.i*(game.secs+ROOM_GAP)*1000;game.cur.deadline=t0+game.secs*1000;$("#passBtn").hidden=true}else $("#passBtn").hidden=false;
+  scene.time=game.endless?Math.min(1,game.i/14):game.i/game.rounds;
+  $("#pK").textContent=game.endless?`АСУУЛТ ${game.i+1} · ∞`:`АСУУЛТ ${game.i+1}/${game.rounds}`;$("#pQ").textContent=cat.q;$("#miss").textContent="";
   $("#ain").value="";$("#ain").disabled=false;
   show("vPrompt","dAnswer");pips();hudPts();
   if(game.i===0||Math.random()<.3)say("ask");
@@ -489,8 +531,8 @@ function ask(){
 }
 function timerLoop(){
   const c=game&&game.cur;if(!c||c.done)return;
-  const left=Math.max(0,SECS-(performance.now()-c.start)/1000);const sec=Math.ceil(left);
-  if(sec!==c.lastSec){c.lastSec=sec;$("#secs").textContent=sec;drawTimer(left/SECS,left<8);if(sec<=5&&sec>0)SFX.tick()}
+  const S=game.secs;const left=Math.max(0,c.deadline?(c.deadline-srvNow())/1000:S-(performance.now()-c.start)/1000);const sec=Math.ceil(left);
+  if(sec!==c.lastSec){c.lastSec=sec;$("#secs").textContent=sec;drawTimer(Math.min(1,left/S),left<Math.min(8,S/3));if(sec<=5&&sec>0)SFX.tick()}
   if(left<=0){resolve(null,"time");return}
   game.raf=requestAnimationFrame(timerLoop);
 }
@@ -523,7 +565,7 @@ $("#af").onsubmit=async e=>{e.preventDefault();if(!game||!game.cur||game.cur.don
     if(game.cur!==cur||cur.done)return;}
   if(!a){const f=$("#af");f.classList.remove("shake");void f.offsetWidth;f.classList.add("shake");$("#miss").textContent=`«${v}» тохирохгүй байна. Дахиад бич!`;$("#ain").select();SFX.miss();say("miss");scene.stumble=.6;return}
   resolve(a,"ok")};
-$("#quitBtn").onclick=()=>{if(!game)return;SFX.click();clearTimeout(game.revealT);clearTimeout(game.nextT);if(game.cur)game.cur.done=true;cancelAnimationFrame(game.raf);if(game.res.length)end();else home()};
+$("#quitBtn").onclick=()=>{if(!game)return;SFX.click();clearTimeout(game.revealT);clearTimeout(game.nextT);if(game.cur)game.cur.done=true;cancelAnimationFrame(game.raf);if(game.room)roomLeave();if(game.res.length)end();else home()};
 $("#passBtn").onclick=()=>{if(game&&game.cur&&!game.cur.done){SFX.click();resolve(null,"pass")}};
 function resolve(a,how){
   const c=game.cur;c.done=true;cancelAnimationFrame(game.raf);$("#ain").disabled=true;$("#ain").blur();
@@ -531,6 +573,7 @@ function resolve(a,how){
   if(a){lt=liveTier(c.cat,a);tier=lt.tier;pts=TIERS[tier].p;record(c.cat,a,tier);
     if(tier>=3){game.streak++;if(game.streak>=2)bonus=5*(game.streak-1)}else game.streak=0}else{game.streak=0;if(game.endless)game.lives--}
   game.res.push({cat:c.cat,a,tier,pts,bonus});
+  if(game.room)roomSend("answer",{i:game.i,ans:a?a.name:"",tier,pts:pts+bonus});
   // 1) the prompt clears away and the rider gallops the earned distance
   show(null,null);
   let wait=650;
@@ -555,10 +598,12 @@ function reveal(a,how,tier,pts,bonus,lt){
     say(how==="pass"?"miss":"time");
   }
   show("vReveal",null);pips();hudPts();
-  const last=game.endless?game.lives<=0:game.i+1>=ROUNDS;
+  const last=game.endless?game.lives<=0:game.i+1>=game.rounds;
   $("#nextBtn").textContent=last?"ДҮН ХАРАХ ▶":"ЦААШ ДАВХИХ ▶";
   // 2) the next button rises in after the result has landed
-  clearTimeout(game.nextT);game.nextT=setTimeout(()=>{show("vReveal","dNext");$("#nextBtn").focus()},a?900:500);
+  clearTimeout(game.nextT);
+  if(game.room){roomRevealLoop(game.i);return}
+  game.nextT=setTimeout(()=>{show("vReveal","dNext");$("#nextBtn").focus()},a?900:500);
 }
 function floaty(txt,col){const f=document.createElement("div");f.className="floaty";f.textContent=txt;f.style.color=col;
   f.style.left=(hx()*P+20)+"px";f.style.top=((hy()-34)*P)+"px";document.body.appendChild(f);setTimeout(()=>f.remove(),1600)}
@@ -579,18 +624,118 @@ function end(){
     <div class="top"><div><div class="lbl">${game.endless?`${game.res.length} АСУУЛТ · НИЙТ ОНОО`:"НИЙТ ОНОО"}</div><div class="big">${total}</div></div><div style="text-align:right"><div class="lbl">НИЙТ ЗАМ</div><div style="font-family:var(--f-pix);font-size:14px;margin-top:10px">${me.km}км</div></div></div>
     <div class="gems">${game.res.slice(0,28).map(r=>`<i style="background:${r.tier?TCOL[r.tier]:"#333"}"></i>`).join("")}</div>
     <ol>${game.res.map(r=>`<li><span class="d" style="background:${r.tier?TCOL[r.tier]:"#333"}"></span><div style="min-width:0"><div class="q">${esc(r.cat.q)}</div><div class="a">${r.a?esc(r.a.name):"—"}${r.tier?` <span style="color:${TCOL[r.tier]};font-size:18px">· ${TIERS[r.tier].n}</span>`:""}</div></div><span class="p">${r.pts+(r.bonus||0)}</span></li>`).join("")}</ol></div>`;
+  game.over=true;$("#again").textContent="ДАХИН ▶";
+  if(game.room)roomEnd();
   show("vEnd","dEnd");pips();hudPts();setPresence("idle");SFX.end();scene.fireworks(total>=300?14:6);say(total>=300?"endHi":"endLo");
 }
-$("#again").onclick=()=>{SFX.click();start("free")};
+$("#again").onclick=()=>{SFX.click();if(game&&game.room)openRoom();else start("free")};
 $("#home").onclick=()=>{SFX.click();home()};
 $("#goFree").onclick=()=>{SFX.click();start("free")};
+$("#goRoom").onclick=()=>{SFX.click();openRoom()};
 $("#copy").onclick=async()=>{try{await navigator.clipboard.writeText(game.share);$("#copy").textContent="ХУУЛЛАА ✓"}catch(e){$("#copy").textContent="ХУУЛЖ ЧАДСАНГҮЙ"}setTimeout(()=>$("#copy").textContent="ХУУЛАХ",1800)};
 $("#muteBtn").onclick=()=>{muted=!muted;LS.set("mute",muted);muteIcon();if(!muted)SFX.click()};muteIcon();
+
+
+/* ================= SETTINGS / AVATAR ================= */
+const HORSES=[["Хүрэн",0x9A5B2C,0x5E3A1A,0x24140C],["Хар",0x2E2626,0x1A1414,0x0A0606],["Цагаан",0xEDE6DA,0xB8B0A2,0x8A8070],["Шарга",0xD9A84E,0xA87A2E,0x6E4A1A],["Бор",0x8A7A6A,0x5E5246,0x2E2620],["Хээр",0xB8542E,0x7A3018,0x2A1008]];
+const DEELS=[["Улаан",0xC8323A,0x8E1F2A],["Цэнхэр",0x2F6BD9,0x1E3F8A],["Ногоон",0x2E9A4A,0x1C6030],["Шар",0xF2B84B,0xB8661E],["Ягаан",0xD84C9A,0x8E2A62],["Хар",0x2A2A3A,0x14141E]];
+const HATS=[["Улаан",0x7A1E28,0xC8323A],["Хүрэн",0x5E3A1A,0xF2B84B],["Хар",0x1A1414,0xC8323A],["Цэнхэр",0x1E3F8A,0xF2B84B]];
+const SEC_OPTS=[10,15,20,30,45,60],ROUND_OPTS=[5,7,10,15,0];
+let cfg=Object.assign({secs:30,rounds:7,horse:0,deel:0,hat:0},LS.get("cfg",{}));
+function saveCfg(){LS.set("cfg",cfg)}
+function AV(){const h=HORSES[cfg.horse]||HORSES[0],d=DEELS[cfg.deel]||DEELS[0],t=HATS[cfg.hat]||HATS[0];
+  return{h1:h[1],h2:h[2],m:h[3],d:d[1],ds:d[2],y:cfg.deel===3?0xC8323A:0xF2B84B,ht:t[1],rib:t[2]}}
+const hexc=n=>"#"+n.toString(16).padStart(6,"0");
+function drawPreview(cv){const g=cv.getContext("2d");g.imageSmoothingEnabled=false;g.clearRect(0,0,cv.width,cv.height);
+  cxSwap(g);rider(16,27,Math.floor(performance.now()/120)%4,0);cxSwap(null)}
+function cxSwap(g){cxRef=g}
+function settingsHTML(){
+  const opt=(key,list,label)=>`<div class="opts" data-k="${key}">${list.map((o,i)=>`<button type="button" data-v="${i}" aria-pressed="${cfg[key]===i}">${o[1]!==undefined&&typeof o[1]==="number"?`<span class="sw" style="background:${hexc(o[1])}"></span>`:""}${esc(o[0])}</button>`).join("")}</div>`;
+  return `<h4>Таны нэр</h4><div class="field" style="margin:6px 0 10px"><input id="nick" maxlength="16" value="${esc(me.name)}" aria-label="Таны нэр"><button class="go ghost" id="nickSave" style="font-size:9px;padding:10px 12px 12px">ХАДГАЛАХ</button></div>
+  <h4>Морьтон</h4><canvas class="prev" id="prevCv" width="38" height="30"></canvas>
+  <h4>Морины зүс</h4>${opt("horse",HORSES)}
+  <h4>Дээлийн өнгө</h4>${opt("deel",DEELS)}
+  <h4>Малгай</h4>${opt("hat",HATS)}
+  <h4>Асуулт бүрт хэдэн секунд</h4><div class="opts" data-k="secs" data-raw="1">${SEC_OPTS.map(v=>`<button type="button" data-v="${v}" aria-pressed="${cfg.secs===v}">${v} сек</button>`).join("")}</div>
+  <h4>Ганцаараа тоглоход хэдэн асуулт</h4><div class="opts" data-k="rounds" data-raw="1">${ROUND_OPTS.map(v=>`<button type="button" data-v="${v}" aria-pressed="${cfg.rounds===v}">${v?v+" асуулт":"Хязгааргүй (3 амь)"}</button>`).join("")}</div>
+  <p style="color:var(--ink-3);font-size:16px">Өдрийн аялал хүн бүрт ижил байх ёстой тул үргэлж 7 асуулт, 30 секунд.</p>`}
+function bindSettings(body){
+  body.querySelectorAll(".opts[data-k]").forEach(g=>g.querySelectorAll("button").forEach(b=>b.onclick=()=>{cfg[g.dataset.k]=+b.dataset.v;saveCfg();SFX.click();
+    g.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b))}));
+  const nk=$("#nickSave");if(nk)nk.onclick=()=>{const v=cleanName($("#nick").value);if(!v){$("#nick").focus();return}me.name=v;save();setPresence(game?"playing":"idle");nk.textContent="ХАДГАЛЛАА ✓"};
+  const pc=$("#prevCv");if(pc){(function loop(){if(!document.body.contains(pc)||$("#sheet").hidden)return;drawPreview(pc);requestAnimationFrame(loop)})()}}
+const cleanName=v=>String(v||"").replace(/[<>]/g,"").replace(/\s+/g," ").trim().slice(0,16);
+
+/* ================= NAME GATE + LOGO ================= */
+function drawLogos(){for(const id of ["logo","logo2"]){const c=$("#"+id);if(c)drawMascot(0,0,c.getContext("2d"))}
+  try{const f=document.createElement("canvas");f.width=20;f.height=20;drawMascot(0,0,f.getContext("2d"));$("#favicon").href=f.toDataURL("image/png")}catch(e){}}
+function nameGate(){if(me.named&&me.name)return;const g=$("#gate");g.hidden=false;$("#gateName").value=me.named?me.name:"";setTimeout(()=>$("#gateName").focus(),80)}
+$("#gateF").onsubmit=e=>{e.preventDefault();const v=cleanName($("#gateName").value);
+  if(v.length<2){$("#gateErr").textContent="Хамгийн багадаа 2 үсэг бичнэ үү.";return}
+  me.name=v;me.named=true;save();setPresence("idle");$("#gate").hidden=true;SFX.click();say(null,`Сайн уу, ${v}! Ховор хариултаар намайг хооллоорой.`)};
+
+/* ================= ROOMS (play with friends) ================= */
+const ROOM_GAP=8;let roomState=null,roomCode=null,roomTimer=null,srvOff=0,webMode=false;
+const srvNow=()=>Date.now()+srvOff;
+const myId=()=>LS.get("wid",null)||"local";
+async function rcall(path,b){const r=await fetch("/api/room/"+path,b?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}:undefined);
+  const j=await r.json().catch(()=>({}));if(j.now)srvOff=j.now-Date.now();if(!r.ok)throw new Error(j.err||"Алдаа гарлаа");if(j.room)roomState=j.room;return j}
+function roomSend(kind,d){if(!roomCode)return;rcall(kind,Object.assign({code:roomCode,id:myId()},d)).catch(()=>{})}
+function roomLeave(){if(roomCode)rcall("leave",{code:roomCode,id:myId()}).catch(()=>{});roomCode=null;roomState=null;clearInterval(roomTimer)}
+function roomPoll(){clearInterval(roomTimer);roomTimer=setInterval(async()=>{if(!roomCode)return;try{await rcall(roomCode+"?id="+encodeURIComponent(myId()))}catch(e){if(/олдсонгүй/.test(e.message)){roomLeave();if(!$("#sheet").hidden)openRoom();return}}
+  roomTick()},1500)}
+let roomStarting=false,roomPlayed=0;
+function roomTick(){const r=roomState;if(!r)return;
+  if(r.phase==="lobby"&&!game&&!$("#sheet").hidden&&$("#shTitle").dataset.k==="room")renderLobby();
+  if(r.phase==="play"&&(!game||(game.over&&game.room))&&!roomStarting&&r.start!==roomPlayed){roomStarting=true;roomPlayed=r.start;$("#sheet").hidden=true;
+    const go=()=>{const left=Math.ceil((r.start-srvNow())/1000);if(left>0){toast(`Тоглолт эхлэхэд <b>${left}</b>...`);SFX.tick();setTimeout(go,Math.min(1000,r.start-srvNow()));return}
+      $("#toast").hidden=true;roomStarting=false;start("room",{code:roomCode,cats:r.cats,secs:r.secs,rounds:r.rounds})};go()}}
+function othersHTML(i){const r=roomState;if(!r)return"";const rows=r.players.filter(p=>p.id!==myId()).map(p=>{const a=p.ans[i];
+  return a?`<div><b>${esc(p.name)}</b>: ${a.ans?`«${esc(a.ans)}» <span style="color:${TCOL[a.tier]}">${TIERS[a.tier]?TIERS[a.tier].n:""} +${a.pts}</span>`:"—"}</div>`:`<div><b>${esc(p.name)}</b>: бодож байна...</div>`});
+  return rows.length?rows.join(""):""}
+function roomRevealLoop(i){const v=$("#vReveal");let box=v.querySelector(".others");if(!box){box=document.createElement("div");box.className="others";v.appendChild(box)}
+  const r=roomState;const next=r.start+(i+1)*(r.secs+ROOM_GAP)*1000;
+  const tick=()=>{if(!game||!game.room||game.i!==i)return;const left=Math.ceil((next-srvNow())/1000);
+    box.innerHTML=othersHTML(i)+`<div style="color:var(--gold-l);margin-top:4px">${i+1>=game.rounds?"Дүн":"Дараагийн асуулт"} ${Math.max(0,left)} секундэд...</div>`;
+    if(left<=0){game.i++;ask();return}game.nextT=setTimeout(tick,500)};tick()}
+function roomEnd(){const box=document.createElement("div");box.className="panel end";box.style.marginTop="10px";$("#vEnd").appendChild(box);
+  const draw=()=>{const r=roomState;if(!r)return;const list=r.players.slice().sort((a,b)=>b.score-a.score);
+    box.innerHTML=`<div class="lbl">ӨРӨӨ ${esc(r.code)} · ДҮН</div><ol>${list.map((p,k)=>`<li><span class="d" style="background:${k===0?"#FFC94A":k===1?"#C9C4DC":k===2?"#B8661E":"#333"}"></span><div class="a">${k+1}. ${esc(p.name)}${p.id===myId()?" (та)":""}</div><span class="p">${p.score}</span></li>`).join("")}</ol>`};
+  draw();setTimeout(draw,1600);setTimeout(draw,4000);$("#again").textContent="ӨРӨӨ РҮҮ ▶"}
+function openRoom(){
+  $("#sheet").hidden=false;$("#shTitle").textContent="НАЙЗУУДТАЙ";$("#shTitle").dataset.k="room";const body=$("#shBody");
+  if(!webMode){body.innerHTML=`<p style="color:var(--ink-2)">Найзуудтайгаа тоглох нь вэб сайт дээр л ажиллана.</p>`;return}
+  if(game&&game.room){game=null}
+  if(roomCode&&roomState){if(roomState.phase!=="lobby"&&roomState.host===myId())rcall("again",{code:roomCode,id:myId()}).then(renderLobby).catch(()=>{});renderLobby();roomPoll();return}
+  body.innerHTML=`<p style="color:var(--ink-2);margin:0 0 12px">Өрөө үүсгээд кодоо найзууддаа өг. Бүгд нэг асуултад зэрэг хариулж, хэн нь илүү ховор хариулт олохыг харна.</p>
+    <button class="go" id="rNew" style="width:100%">ӨРӨӨ ҮҮСГЭХ</button>
+    <h4 style="margin-top:16px">Эсвэл кодоор нэгдэх</h4>
+    <div class="field" style="margin-top:6px"><input id="rCode" maxlength="4" placeholder="КОД" aria-label="Өрөөний код" style="text-transform:uppercase;letter-spacing:.2em" autocapitalize="characters"><button class="go ghost" id="rJoin" style="font-size:9px;padding:10px 12px 12px">НЭГДЭХ</button></div>
+    <div class="miss" id="rErr" style="margin-top:8px"></div>`;
+  $("#rNew").onclick=async()=>{SFX.click();try{const j=await rcall("new",{id:myId(),name:me.name});roomCode=j.room.code;renderLobby();roomPoll()}catch(e){$("#rErr").textContent=e.message}};
+  const join=async()=>{const c=$("#rCode").value.trim().toUpperCase();if(c.length!==4){$("#rErr").textContent="4 үсэгтэй код оруулна уу.";return}
+    try{const j=await rcall("join",{code:c,id:myId(),name:me.name});roomCode=j.room.code;SFX.click();renderLobby();roomPoll()}catch(e){$("#rErr").textContent=e.message}};
+  $("#rJoin").onclick=join;$("#rCode").onkeydown=e=>{if(e.key==="Enter")join()};
+}
+function renderLobby(){const r=roomState;if(!r)return;const body=$("#shBody");const host=r.host===myId();
+  const prevCode=$("#lobbyCode");const focusIn=document.activeElement&&body.contains(document.activeElement)&&document.activeElement.tagName==="INPUT";if(focusIn)return;
+  body.innerHTML=`<p style="color:var(--ink-2);margin:0">Өрөөний код. Найзууддаа хэлээрэй:</p><div class="code" id="lobbyCode">${esc(r.code)}</div>
+    <button type="button" class="pass" id="rShare" style="display:block;margin:0 auto 6px">Холбоос хуулах</button>
+    <h4>Тоглогчид (${r.players.length})</h4><ul class="plist">${r.players.map(p=>`<li><span>${esc(p.name)}${p.id===r.host?" 👑":""}${p.id===myId()?" (та)":""}</span></li>`).join("")}</ul>
+    ${host?`<h4>Асуулт бүрт</h4><div class="opts" data-rk="secs">${SEC_OPTS.map(v=>`<button type="button" data-v="${v}" aria-pressed="${r.secs===v}">${v} сек</button>`).join("")}</div>
+    <h4>Асуултын тоо</h4><div class="opts" data-rk="rounds">${[5,7,10,15].map(v=>`<button type="button" data-v="${v}" aria-pressed="${r.rounds===v}">${v}</button>`).join("")}</div>
+    <button class="go" id="rStart" style="width:100%" ${r.players.length<1?"disabled":""}>ЭХЛҮҮЛЭХ ▶</button>`:`<p style="color:var(--ink-2)">${r.secs} секунд · ${r.rounds} асуулт. Өрөөний эзэн эхлүүлэхийг хүлээж байна...</p>`}
+    <button type="button" class="pass" id="rLeave" style="display:block;margin:12px auto 0">Өрөөнөөс гарах</button>`;
+  body.querySelectorAll(".opts[data-rk]").forEach(g=>g.querySelectorAll("button").forEach(b=>b.onclick=()=>{SFX.click();rcall("set",{code:r.code,id:myId(),[g.dataset.rk]:+b.dataset.v}).then(renderLobby).catch(()=>{})}));
+  const st=$("#rStart");if(st)st.onclick=async()=>{SFX.click();await dataReady;const cats=pickCats(Math.floor(Math.random()*1e9),r.rounds);try{await rcall("start",{code:r.code,id:myId(),cats});roomTick()}catch(e){toast(esc(e.message))}};
+  $("#rLeave").onclick=()=>{SFX.click();roomLeave();openRoom()};
+  $("#rShare").onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+"/?room="+r.code);$("#rShare").textContent="Хуулсан ✓"}catch(e){}};
+}
 
 /* ================= SHEETS ================= */
 let boardMode="today";
 function openSheet(kind){
-  const body=$("#shBody");$("#sheet").hidden=false;
+  const body=$("#shBody");$("#sheet").hidden=false;$("#shTitle").dataset.k=kind;
   if(kind==="album"){
     $("#shTitle").textContent="ХОВДОГ ЦҮНХ";
     const found=Object.keys(me.alb).length,all=CATS.reduce((s,c)=>s+c.total,0);
@@ -602,16 +747,17 @@ function openSheet(kind){
     const list=Object.entries(players).map(([id,p])=>({id,...p}));const myId=uid||"local";
     if(!list.find(p=>p.id===myId))list.push({id:myId,...me});
     const rows=boardMode==="today"?list.filter(p=>p.daily&&p.daily.d===today()).sort((a,b)=>b.daily.s-a.daily.s).map(p=>({id:p.id,n:p.name,v:p.daily.s})):list.filter(p=>p.km>0).sort((a,b)=>b.km-a.km).map(p=>({id:p.id,n:p.name,v:p.km+"км"}));
-    body.innerHTML=`<div class="field" style="margin-bottom:14px"><input id="nick" maxlength="24" value="${esc(me.name)}" aria-label="Таны нэр"><button class="go ghost" id="nickSave" style="font-size:9px;padding:10px 12px 12px">НЭР СОЛИХ</button></div>
-    <div class="tabs"><button aria-pressed="${boardMode==="today"}" data-b="today">Өнөөдөр</button><button aria-pressed="${boardMode==="km"}" data-b="km">Нийт зам</button></div>
+    body.innerHTML=`<div class="tabs"><button aria-pressed="${boardMode==="today"}" data-b="today">Өнөөдөр</button><button aria-pressed="${boardMode==="km"}" data-b="km">Нийт зам</button></div>
     ${rows.length?`<table><thead><tr><th>#</th><th>ТОГЛОГЧ</th><th style="text-align:right">${boardMode==="today"?"ОНОО":"ЗАМ"}</th></tr></thead><tbody>${rows.slice(0,50).map((r,i)=>`<tr class="${r.id===myId?"me":""}"><td>${i+1}</td><td>${esc(r.n||"Аялагч")}</td><td class="n">${r.v}</td></tr>`).join("")}</tbody></table>`:`<p style="color:var(--ink-2)">${boardMode==="today"?"Өнөөдөр хэн ч өдрийн аяллаа дуусгаагүй байна. Эхнийх нь бол!":"Одоохондоо хоосон."}</p>`}
     ${db?"":`<p style="color:var(--ink-3);font-size:14px">Одоогоор энэ төхөөрөмж дээр л хадгалагдаж байна.</p>`}`;
     body.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{boardMode=b.dataset.b;openSheet("board")});
-    $("#nickSave").onclick=()=>{const v=$("#nick").value.trim().slice(0,24);if(v){me.name=v;save();setPresence(game?"playing":"idle");$("#nickSave").textContent="ХАДГАЛЛАА ✓"}};
+  } else if(kind==="settings"){
+    $("#shTitle").textContent="ТОХИРГОО";body.innerHTML=settingsHTML();bindSettings(body);
   } else {
     $("#shTitle").textContent="ЗААВАР";
     body.innerHTML=`<ol class="help" style="padding-left:20px;margin:6px 0">
-      <li>Аялал бүрт <b>7 асуулт</b>. Асуулт бүрт <b>30 секундэд</b> нэг хариулт бич.</li>
+      <li>Өдрийн аялалд <b>7 асуулт</b>, асуулт бүрт <b>30 секунд</b>. Ганцаараа тоглоход асуултын тоо, секундийг <b>Тохиргоо</b>-оос сольж болно.</li>
+      <li><b>Найзуудтай</b>: өрөө үүсгээд 4 үсэгтэй кодоо найзууддаа өг. Бүгд нэг асуултад зэрэг хариулна.</li>
       <li>Буруу бичвэл цаг дуустал дахин оролдож болно.</li>
       <li>Хариулт <b>ховор</b> байх тусам их оноо: ${TIERS.slice(1).map((t,i)=>`<b style="color:${TCOL[i+1]}">${t.n}</b> ${t.p}`).join(", ")}.</li>
       <li>Тэмээ ба түүнээс дээш зэргийг дараалан авбал <b>ЦУВАА</b> урамшуулал нэмэгдэнэ.</li>
@@ -658,7 +804,8 @@ function webApi(){
 }
 (async function connect(){
   let C=window.claude&&window.claude.use?window.claude:null;
-  if(!C&&/^https?:$/.test(location.protocol)){try{const h=await fetch("/api/health").then(r=>r.json());if(h&&h.ok){C=webApi();if(!h.ai)C.noAi=true}}catch(e){}}
+  if(!C&&/^https?:$/.test(location.protocol)){try{const h=await fetch("/api/health").then(r=>r.json());if(h&&h.ok){C=webApi();webMode=true;if(!h.ai)C.noAi=true}}catch(e){}}
+  if(webMode){const q=new URLSearchParams(location.search).get("room");if(q&&me.named){openRoom();$("#rCode").value=q.toUpperCase().slice(0,4)}}
   if(C&&!window.claude){dataReady.then(()=>fetch("/api/extra")).then(r=>r.json()).then(ex=>{for(const [cid,list] of Object.entries(ex||{})){const c=CATMAP[cid];if(!c||!Array.isArray(list))continue;
     for(const e of list){const id=loose(e.name);if(!id)continue;let a=c.ans.find(x=>x.id===id);const keys=[e.name,...(e.keys||[])].map(x=>({c:cyrNorm(String(x)),l:loose(String(x))}));
       if(a)a.keys.push(...keys);else c.ans.push({id,name:e.name,tier:Math.max(1,Math.min(5,+e.tier||4)),ai:true,keys})}}}).catch(()=>{})}
@@ -710,7 +857,8 @@ const SKY=[
  {t:.75,top:"#1B1E55",bot:"#B0507A",far:"#4A447E",snow:"#C0AEDC",sun:"#FF8A5A",tint:"#6A5A8A"},
  {t:1,  top:"#070A22",bot:"#22306E",far:"#28305E",snow:"#8A96C8",sun:"#E8ECFF",tint:"#2A3060"}];
 function pal(t){let a=SKY[0],b=SKY[3];for(let i=0;i<3;i++)if(t>=SKY[i].t&&t<=SKY[i+1].t){a=SKY[i];b=SKY[i+1];break}const k=(t-a.t)/((b.t-a.t)||1);const o={};for(const key in a)if(key!=="t")o[key]=rgbMix(a[key],b[key],k);return o}
-const R=(x,y,ww,hh,c)=>{cx.fillStyle=typeof c==="number"?css(c):c;cx.fillRect(Math.round(x),Math.round(y),ww,hh)};
+let cxRef=null;
+const R=(x,y,ww,hh,c)=>{const g=cxRef||cx;g.fillStyle=typeof c==="number"?css(c):c;g.fillRect(Math.round(x),Math.round(y),ww,hh)};
 function ridge(x,base,amp,f,seed){return base-amp*(.5*Math.sin(x*f+seed)+.3*Math.sin(x*f*2.3+seed*1.7)+.2*Math.abs(Math.sin(x*f*5.1+seed*.3)))}
 const STARS=Array.from({length:90},(_,i)=>{const r=rng(i*97+3);return{x:r(),y:r()*.55,p:r()*6,b:r()<.15}});
 function cloud(x,y,s,c){R(x+2*s,y,6*s,1*s,c);R(x,y+s,10*s,2*s,c);R(x+s,y-s,3*s,s,c)}
@@ -728,8 +876,8 @@ function yak(x,y,f){const c=0x26222A;R(x,y-5,8,3,c);R(x,y-2,8,1,0x3A3440);R(x+8,
 function rock(x,y,ww,hh,c,hl){R(x,y-hh,ww,hh,c);R(x+1,y-hh,ww-2,1,hl);R(x-1,y-hh+1,1,hh-1,c);R(x+ww,y-hh+2,1,hh-2,c)}
 function boat(x,y,t){R(x,y-2,7,2,0x7A4A2A);R(x+1,y-1,5,1,0x5A3A1A);R(x+3,y-8,1,6,0x5A3A1A);R(x+4,y-7,2,4,0xF4F1EA);R(x,y+1+(Math.floor(t*2)%2),7,1,0x9FD0FF)}
 function swan(x,y){R(x,y-2,4,2,0xFFFFFF);R(x+3,y-5,1,3,0xFFFFFF);R(x+4,y-5,1,1,0xF2A040)}
-function rider(ox,oy,frame,stumble){
-  const H1=0x9A5B2C,H2=0x5E3A1A,M=0x24140C,D=0xC8323A,DS=0x8E1F2A,Y=0xF2B84B,S=0xE8B08A,HT=0x7A1E28;
+function rider(ox,oy,frame,stumble,av){
+  av=av||AV();const H1=av.h1,H2=av.h2,M=av.m,D=av.d,DS=av.ds,Y=av.y,S=0xE8B08A,HT=av.ht;
   const bob=frame%2;oy-=bob;if(stumble>0)oy+=Math.round(Math.sin(stumble*20));
   const ph=frame*Math.PI/2;
   const leg=(lx,off,col)=>{const a=Math.round(2*Math.sin(ph+off)),l=Math.max(0,Math.round(1.6*Math.sin(ph+off+1.4)));R(ox+lx,oy-7,2,3,col);R(ox+lx+Math.round(a/2),oy-4-l,2,2,col);R(ox+lx+a,oy-2-l,2,2,col);R(ox+lx+a,oy-1-l,2,1,M)};
@@ -742,7 +890,7 @@ function rider(ox,oy,frame,stumble){
   R(ox-3,oy-13,7,1,0x3A2010);R(ox-1,oy-10,2,3,M);
   R(ox-2,oy-18,5,6,D);R(ox-4-bob,oy-13,3,2,DS);R(ox-2,oy-14,5,1,Y);R(ox+3,oy-17,3,1,D);R(ox+6,oy-17,1,1,S);R(ox+7,oy-17,4,1,M);
   R(ox-1,oy-22,3,4,S);R(ox+1,oy-21,1,1,M);
-  R(ox-2,oy-23,5,1,HT);R(ox-1,oy-24,3,1,HT);R(ox,oy-25,1,1,Y);R(ox-3,oy-23+bob,1,1,0xC8323A);R(ox-4,oy-22+bob,1,1,0xC8323A);
+  R(ox-2,oy-23,5,1,HT);R(ox-1,oy-24,3,1,HT);R(ox,oy-25,1,1,Y);R(ox-3,oy-23+bob,1,1,av.rib);R(ox-4,oy-22+bob,1,1,av.rib);
 }
 function eagle(x,y,f){const c=0x2A1E14;R(x,y,3,1,c);R(x+3,y-1,1,1,0xF2EFE6);if(f){R(x-3,y-2,3,1,c);R(x-5,y-3,2,1,c);R(x+1,y-2,1,1,c);R(x+2,y-3,2,1,c)}else{R(x-3,y+1,3,1,c);R(x-5,y+2,2,1,c);R(x+1,y+1,2,1,c)}}
 // ---- distance ruler (DOM) ----
@@ -823,7 +971,7 @@ function draw(now){
 }
 /* mascot: greedy marmot, drawn in pixels */
 const mcx=$("#mcv").getContext("2d");const mascot={talk:0};
-function drawMascot(t,dt){mascot.talk=Math.max(0,mascot.talk-dt);const g=mcx;g.clearRect(0,0,20,18);const P=(x,y,ww,hh,c)=>{g.fillStyle=c;g.fillRect(x,y,ww,hh)};
+function drawMascot(t,dt,g=mcx){mascot.talk=Math.max(0,mascot.talk-dt);g.clearRect(0,0,20,18);const P=(x,y,ww,hh,c)=>{g.fillStyle=c;g.fillRect(x,y,ww,hh)};
   const fur="#B57B3C",dk="#6E4520",bel="#EBC38A",out="#2A1608";const b=Math.floor(t*2)%2;const y0=b;
   P(5,4+y0,10,1,out);P(4,5+y0,12,1,out);P(3,6+y0,1,10,out);P(16,6+y0,1,10,out);P(4,16,12,1,out);
   P(4,5+y0,12,11-y0,fur);P(5,4+y0,10,1,fur);P(4,4+y0,2,2,dk);P(14,4+y0,2,2,dk);
@@ -834,6 +982,8 @@ function drawMascot(t,dt){mascot.talk=Math.max(0,mascot.talk-dt);const g=mcx;g.c
   P(6,13,2,2,dk);P(12,13,2,2,dk);P(5,16,3,1,dk);P(12,16,3,1,dk);P(16,12,3,2,dk);}
 requestAnimationFrame(draw);
 drawTimer(1,false);
+drawLogos();
 home();
-setTimeout(()=>say("hello"),600);
+nameGate();
+setTimeout(()=>{if(me.named)say("hello")},600);
 </script>

@@ -92,6 +92,42 @@ Reply with JSON only, no other text: {"valid": true or false, "name": "the answe
   }
   return null}
 
+
+// ---- rooms: play the same prompts with friends ----
+const rooms=new Map();const ROOM_GAP=8;
+const CODE_CH="ABCDEFGHJKLMNPRSTUVWXYZ";
+function newCode(){for(let k=0;k<50;k++){let c="";for(let i=0;i<4;i++)c+=CODE_CH[Math.floor(Math.random()*CODE_CH.length)];if(!rooms.has(c))return c}return null}
+function roomView(r){const now=Date.now();
+  if(r.phase==="play"&&now>r.start+r.rounds*(r.secs+ROOM_GAP)*1000+2000)r.phase="done";
+  return{code:r.code,host:r.host,phase:r.phase,secs:r.secs,rounds:r.rounds,cats:r.cats,start:r.start,gap:ROOM_GAP,
+    players:[...r.players.entries()].map(([id,p])=>({id,name:p.name,ans:p.ans,score:Object.values(p.ans).reduce((s,a)=>s+(+a.pts||0),0)}))}}
+setInterval(()=>{const now=Date.now();for(const [c,r] of rooms){
+  for(const [id,p] of r.players)if(now-p.seen>45000&&r.phase==="lobby")r.players.delete(id);
+  if(!r.players.size||now-r.touched>3*3600e3)rooms.delete(c);else if(!r.players.has(r.host))r.host=r.players.keys().next().value}},10000);
+async function roomApi(req,res,p){
+  const now=Date.now();const ok=r=>send(res,200,{now,room:roomView(r)});const bad=(c,m)=>send(res,c,{now,err:m});
+  let m=p.match(/^\/api\/room\/([A-Z]{4})$/);
+  if(m&&req.method==="GET"){const r=rooms.get(m[1]);if(!r)return bad(404,"Өрөө олдсонгүй");const id=new URL(req.url,"http://x").searchParams.get("id");const pl=id&&r.players.get(id);if(pl)pl.seen=now;r.touched=now;return ok(r)}
+  if(req.method!=="POST")return bad(404,"nf");
+  if(limited(req,"room",120))return bad(429,"Хэтэрхий олон хүсэлт");
+  const b=await body(req,8000);const id=clean(b.id,64),name=clean(b.name,16)||"Аялагч";if(!id)return bad(400,"id");
+  const act=p.slice("/api/room/".length);
+  if(act==="new"){if(rooms.size>2000)return bad(503,"Сервер завгүй байна");const code=newCode();if(!code)return bad(503,"Дахин оролдоно уу");
+    const r={code,host:id,phase:"lobby",secs:30,rounds:7,cats:[],start:0,players:new Map([[id,{name,ans:{},seen:now}]]),touched:now};rooms.set(code,r);return ok(r)}
+  const r=rooms.get(clean(b.code,4).toUpperCase());if(!r)return bad(404,"Өрөө олдсонгүй");r.touched=now;
+  if(act==="join"){if(!r.players.has(id)){if(r.phase==="play")return bad(409,"Тоглолт эхэлсэн байна. Дуусахыг хүлээгээрэй.");if(r.players.size>=20)return bad(409,"Өрөө дүүрсэн");r.players.set(id,{name,ans:{},seen:now})}
+    else{const pl=r.players.get(id);pl.name=name;pl.seen=now}return ok(r)}
+  const pl=r.players.get(id);if(!pl)return bad(403,"Та энэ өрөөнд байхгүй");pl.seen=now;
+  if(act==="leave"){r.players.delete(id);if(r.host===id&&r.players.size)r.host=r.players.keys().next().value;if(!r.players.size)rooms.delete(r.code);return send(res,200,{now,ok:true})}
+  if(act==="answer"){if(r.phase!=="play")return ok(r);const i=Math.floor(+b.i);if(!(i>=0&&i<r.rounds)||pl.ans[i])return ok(r);
+    pl.ans[i]={ans:clean(b.ans,40),tier:Math.max(0,Math.min(5,+b.tier||0)),pts:Math.max(0,Math.min(200,+b.pts||0))};return ok(r)}
+  if(r.host!==id)return bad(403,"Зөвхөн өрөөний эзэн");
+  if(act==="set"){if(r.phase!=="lobby")return ok(r);if([10,15,20,30,45,60].includes(+b.secs))r.secs=+b.secs;if([5,7,10,15].includes(+b.rounds))r.rounds=+b.rounds;return ok(r)}
+  if(act==="start"){if(r.phase==="play")return ok(r);const cats=Array.isArray(b.cats)?b.cats.slice(0,15).map(x=>clean(x,40)).filter(Boolean):[];if(cats.length<1)return bad(400,"cats");
+    r.cats=cats;r.rounds=cats.length;r.phase="play";r.start=now+4000;for(const q of r.players.values())q.ans={};return ok(r)}
+  if(act==="again"){r.phase="lobby";r.cats=[];r.start=0;for(const q of r.players.values())q.ans={};return ok(r)}
+  return bad(404,"nf")}
+
 http.createServer(async(req,res)=>{
   const u=new URL(req.url,"http://x");const p=u.pathname;
   try{
@@ -118,6 +154,7 @@ http.createServer(async(req,res)=>{
       const b=await body(req,4000);const q=clean(b.q,140),common=clean(b.common,400),input=clean(b.input,60),catId=clean(b.cat,40);
       if(!q||!input)return send(res,400,{err:"bad"});
       const r=await judge(q,common,input,catId);return send(res,200,r||{unavailable:true})}
+    if(p.startsWith("/api/room/"))return await roomApi(req,res,p);
     if(p.startsWith("/api/"))return send(res,404,{err:"nf"});
     // static
     let f=p==="/"?"/index.html":decodeURIComponent(p);const full=path.normalize(path.join(PUB,f));
