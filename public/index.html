@@ -506,7 +506,7 @@ The text may be Mongolian Cyrillic, Mongolian in Latin letters, English or anoth
 Decide whether it is a genuinely valid answer to the prompt. Funny, playful or cheeky answers count when they truly fit (for example a sex toy for "things you take on a trip"). Reject gibberish, off-topic text, and anything that does not fit.
 Rate how rare it is among answers people would give: 1 = very common, 2 = fairly common, 3 = uncommon, 4 = rare, 5 = very rare but clearly valid.
 Reply with JSON only: {"valid": true or false, "name": "the answer's standard name in Mongolian Cyrillic", "tier": 1-5}`;
-  try{const r=sampler.web?await sampler.judge(cat.q,common,input):await sampler.json(msg,{modelTier:"quick"});
+  try{const r=sampler.web?await sampler.judge(cat.q,common,input,cat.id):await sampler.json(msg,{modelTier:"quick"});
     if(!r||r.valid!==true)return false;
     const name=String(r.name||input).trim().slice(0,40)||input;const tier=Math.max(1,Math.min(5,Math.round(+r.tier||4)));
     const id=loose(name)||loose(input);if(!id)return false;
@@ -651,7 +651,7 @@ function webApi(){
                     set:async doc=>post("/api/"+path.replace("players/","player/"),{token:tok,doc})}),
         collection:()=>({onSnapshot:cb=>{const load=()=>fetch("/api/players").then(r=>r.json()).then(list=>cb({docs:list.map(x=>({id:x.id,data:()=>x.doc}))})).catch(()=>{});
           load();setInterval(()=>{if(!document.hidden)load()},30000)}})},
-    sample:{web:true,judge:async(q,common,input)=>{const r=await post("/api/judge",{q,common,input});if(!r||r.unavailable)return null;return r}},
+    sample:{web:true,judge:async(q,common,input,cat)=>{const r=await post("/api/judge",{q,common,input,cat});if(!r||r.unavailable)return null;return r}},
     room:{presence:async p=>{pres=p;ping()},onPeers:cb=>{peersCb=cb},on:(t,cb)=>{if(t==="find")findCb=cb},
           emit:async(t,d)=>{if(t==="find")post("/api/find",Object.assign({id},d))}}};
   return{use:async k=>api[k]||null};
@@ -659,6 +659,9 @@ function webApi(){
 (async function connect(){
   let C=window.claude&&window.claude.use?window.claude:null;
   if(!C&&/^https?:$/.test(location.protocol)){try{const h=await fetch("/api/health").then(r=>r.json());if(h&&h.ok){C=webApi();if(!h.ai)C.noAi=true}}catch(e){}}
+  if(C&&!window.claude){dataReady.then(()=>fetch("/api/extra")).then(r=>r.json()).then(ex=>{for(const [cid,list] of Object.entries(ex||{})){const c=CATMAP[cid];if(!c||!Array.isArray(list))continue;
+    for(const e of list){const id=loose(e.name);if(!id)continue;let a=c.ans.find(x=>x.id===id);const keys=[e.name,...(e.keys||[])].map(x=>({c:cyrNorm(String(x)),l:loose(String(x))}));
+      if(a)a.keys.push(...keys);else c.ans.push({id,name:e.name,tier:Math.max(1,Math.min(5,+e.tier||4)),ai:true,keys})}}}).catch(()=>{})}
   if(!C)return;
   try{const user=await C.use("user");if(user)uid=await user.id();db=await C.use("db");
     if(db&&uid){const mine=await db.doc("players/"+uid).get().catch(()=>null);
