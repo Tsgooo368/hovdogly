@@ -192,9 +192,11 @@ rankCats();
 async function wikiJob(){
   const todo=new Set();for(const c of catsRaw)if(ENT(c.id)&&Array.isArray(c.a))for(const e of c.a){const t=eng(e);if(t&&!(t in wiki))todo.add(t)}
   const list=[...todo];if(!list.length)return;console.log("wiki: looking up",list.length,"names");
-  const H={headers:{"User-Agent":"HovdoglyGame/1.0 (rare-answer trivia game)"}};const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const H={headers:{"User-Agent":"HovdoglyGame/1.0 (https://hovdogly-production.up.railway.app; trivia game, small batch job)","Api-User-Agent":"HovdoglyGame/1.0 (https://hovdogly-production.up.railway.app)"}};
+  const getJ=async u=>{for(let k=0;k<4;k++){const r=await fetch(u,H);const t=await r.text();try{return JSON.parse(t)}catch(e){console.error("wiki",r.status,t.slice(0,160).replace(/\s+/g," "));await wait(15000*(k+1))}}throw new Error("gave up")};const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  let fails=0;
   for(let i=0;i<list.length;i+=50){const part=list.slice(i,i+50);
-    try{const j=await (await fetch("https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&redirects=1&prop=pageviews|pageprops&ppprop=wikibase_item|disambiguation&pvipdays=60&titles="+encodeURIComponent(part.join("|")),H)).json();
+    try{const j=await getJ("https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&redirects=1&prop=pageviews|pageprops&ppprop=wikibase_item|disambiguation&pvipdays=60&titles="+encodeURIComponent(part.join("|")));
       const to=new Map(part.map(t=>[t,t]));
       for(const n of (j.query&&j.query.normalized)||[])for(const [k,v] of to)if(v===n.from)to.set(k,n.to);
       for(const r of (j.query&&j.query.redirects)||[])for(const [k,v] of to)if(v===r.from)to.set(k,r.to);
@@ -204,9 +206,9 @@ async function wikiJob(){
         wiki[t]={v:Object.values(pg.pageviews||{}).reduce((a,b)=>a+(b||0),0),l:0};
         const q=pg.pageprops&&pg.pageprops.wikibase_item;if(q)(q2t[q]=q2t[q]||[]).push(t)}
       const ids=Object.keys(q2t);
-      if(ids.length){const j2=await (await fetch("https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=sitelinks&ids="+ids.join("|"),H)).json();
+      if(ids.length){const j2=await getJ("https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=sitelinks&ids="+ids.join("|"));
         for(const [q,en] of Object.entries(j2.entities||{})){const l=Object.keys(en.sitelinks||{}).filter(k=>/wiki$/.test(k)&&!/^(commons|species|meta|simple)wiki$/.test(k)).length;for(const t of q2t[q]||[])wiki[t].l=l}}
-    }catch(e){console.error("wiki",e.message);await wait(5000)}
+    }catch(e){console.error("wiki",e.message);if(++fails>=3){console.error("wiki: stopping, will retry on next start");break}continue}fails=0;
     if(i%2000===0)fs.writeFile(WIKI,JSON.stringify(wiki),()=>{});
     await wait(250)}
   fs.writeFileSync(WIKI,JSON.stringify(wiki));rankCats();
